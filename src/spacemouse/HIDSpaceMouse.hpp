@@ -182,9 +182,9 @@ private:
   float x = 0.0f,
         y = 0.0f,
         z = 0.0f,
-        u = 0.0f,
-        v = 0.0f,
-        w = 0.0f;
+        u = 0.0f, // rx
+        v = 0.0f, // ry
+        w = 0.0f; // rz
 
   // TODO: optimize memory by making this a bit map
   /**

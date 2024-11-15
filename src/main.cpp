@@ -1,11 +1,14 @@
 #include <Arduino.h>
 #include "spacemouse/HIDSpaceMouse.hpp"
+#include "magellan/MagellanParser.hpp"
 
 HIDSpaceMouse spaceMouse;
+MagellanParser magellan;
 
 void setup()
 {
   spaceMouse.begin();
+  magellan.begin(&Serial1);
 
   spaceMouse.set_translation(0.0f, 0.0f, 0.0f);
   spaceMouse.set_rotation(0.0f, 0.0f, 0.0f);
@@ -17,5 +20,6 @@ void setup()
 
 void loop()
 {
+  magellan.update();
 
 }
