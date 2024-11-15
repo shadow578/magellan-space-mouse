@@ -1,1 +1,2 @@
-reference implementation by TeachingTech @ https://www.printables.com/model/864950-open-source-spacemouse-space-mushroom-remix
+- `joy4_tt_v2.ino` by TeachingTech @ https://www.printables.com/model/864950-open-source-spacemouse-space-mushroom-remix
+- rest from https://github.com/shadow578/SpaceMouseDecoder
