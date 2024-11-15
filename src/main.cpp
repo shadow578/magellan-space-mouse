@@ -38,7 +38,7 @@ void setup()
 
 void loop()
 {
-  if (magellan.update())
+  if (magellan.update() && magellan.is_ready())
   {
     // something changed, submit new values
     spaceMouse.set_translation(
