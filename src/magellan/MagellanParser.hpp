@@ -54,13 +54,19 @@ public:
    * the mouse will be initialize by subsequent calls to update().
    * check is_ready() to see if the mouse is ready.
    */
-  void begin(HardwareSerial *serial)
+  inline void begin(HardwareSerial *serial)
   {
-    // setup serial for 9600 baud, 8N1
     this->serial = serial;
     this->serial->begin(9600);
 
-    // reset the state machine
+    reset();
+  }
+
+  /**
+   * reset the state machine. This will also cause the space mouse to be re-initialized.
+   */
+  inline void reset()
+  {
     this->state = INIT_RESET;
     this->ready = false;
   }

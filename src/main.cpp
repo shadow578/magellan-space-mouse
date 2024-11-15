@@ -5,6 +5,8 @@
 HIDSpaceMouse spaceMouse;
 MagellanParser magellan;
 
+uint32_t setup_end_millis;
+
 void setup()
 {
   spaceMouse.begin();
@@ -19,6 +21,8 @@ void setup()
   spaceMouse.set_button(HIDSpaceMouse::KnownButton::DUMMY, false);
 
   spaceMouse.submit();
+
+  setup_end_millis = millis();
 }
 
 void loop()
@@ -41,5 +45,14 @@ void loop()
     Serial.print(", buttons: ");
     Serial.print(magellan.get_buttons(), BIN);
     Serial.println();
+  }
+
+  if (!magellan.is_ready() && (millis() - setup_end_millis > 5000))
+  {
+    // not ready after 5 seconds, something is wrong!
+    Serial.println("Magellan is not ready after >5 seconds!");
+    setup_end_millis = millis();
+
+    magellan.reset();
   }
 }
