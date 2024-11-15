@@ -55,19 +55,19 @@ static int16_t decode_signed_word(const char* buffer)
   return value;
 }
 
-void MagellanParser::update()
+bool MagellanParser::update()
 {
   const uint32_t now = millis();
   if (now < this->wait_until)
   {
     // have to wait
-    return;
+    return false;
   }
 
   if (this->serial->available() == 0)
   {
     // no data available
-    return;
+    return false;
   }
 
   const char c = this->serial->read();
@@ -79,33 +79,34 @@ void MagellanParser::update()
     {
       this->send_command(COMMAND_RESET);
       this->wait_until = now + 100; // 100 ms
-      break;
+      return false;
     }
     case INIT_GET_VERSION:
     {
       this->send_command(COMMAND_GET_VERSION);
       this->wait_until = now + 100; // 100 ms
-      break;
+      return false;
     }
     case INIT_ENABLE_BUTTON_REPORTING:
     {
       this->send_command(COMMAND_ENABLE_BUTTON_REPORTING);
       this->wait_until = now + 100; // 100 ms
-      break;
+      return false;
     }
     case INIT_SET_MODE:
     {
       this->send_command(COMMAND_SET_MODE3);
       this->wait_until = now + 100; // 100 ms
-      break;
+      return false;
     }
     case INIT_ZERO:
     {
       this->send_command(COMMAND_ZERO);
       this->wait_until = now + 100; // 100 ms
-      break;
+      return false;
     }
 //#endregion
+
     case IDLE:
     {
       // reset message buffer
@@ -140,7 +141,8 @@ void MagellanParser::update()
         
         this->state = READ_MESSAGE;
       }
-      break;
+
+      return false;
     }
     case READ_MESSAGE:
     {
@@ -149,8 +151,7 @@ void MagellanParser::update()
       {
         rx_buffer[rx_len] = '\0'; // ensure null-termination
 
-        process_message(this->message_type, rx_buffer, rx_len);
-        break;
+        return process_message(this->message_type, rx_buffer, rx_len);
       }
 
       // add character to buffer
@@ -164,7 +165,7 @@ void MagellanParser::update()
         // buffer overflow, wait until the message ends and drop it
         this->state = WAIT_MESSAGE_END;
       }
-      break;
+      return false;
     }
     case WAIT_MESSAGE_END:
     {
@@ -172,13 +173,13 @@ void MagellanParser::update()
       {
         this->state = IDLE;
       }
-      break;
+      return false;
     }
     default:
     {
       // unknown state, reset to IDLE
       this->state = IDLE;
-      break;
+      return false;
     }
   }
 }
@@ -189,7 +190,7 @@ void MagellanParser::send_command(const char* command)
   this->serial->flush();
 }
 
-void MagellanParser::process_message(const message_type_t type, const char* payload, const uint8_t len)
+bool MagellanParser::process_message(const message_type_t type, const char* payload, const uint8_t len)
 {
   switch (type)
   {
@@ -198,18 +199,18 @@ void MagellanParser::process_message(const message_type_t type, const char* payl
       // validate version includes 'MAGELLAN'
       if (strstr(payload, VERSION_MAGIC) == nullptr)
       {
-        break;
+        return false;
       }
 
       this->ready = true;
-      break;
+      return true;
     }
     case KEYPRESS:
     {
       // expect 3 characters in the payload
       if (len != 3)
       {
-        break;
+        return false;
       }
 
       const uint8_t k0 = decode_nibble(payload[0]);
@@ -219,7 +220,7 @@ void MagellanParser::process_message(const message_type_t type, const char* payl
       const uint16_t keys = k2 << 8 | k1 << 4 | k0;
 
       // TODO parse key presses
-      break;
+      return true;
     }
     case POSITION_ROTATION:
     {
@@ -227,7 +228,7 @@ void MagellanParser::process_message(const message_type_t type, const char* payl
       // (mode 3 = position and rotation)
       if (len != 24)
       {
-        break;
+        return false;
       }
 
       // get raw values
@@ -246,13 +247,12 @@ void MagellanParser::process_message(const message_type_t type, const char* payl
       this->u = u / D;
       this->v = v / D;
       this->w = w / D;
-      break;
+      return true;
     }
     default:
     {
       // unknown message type
-      break;
+      return false;
     }
   }
 }
-

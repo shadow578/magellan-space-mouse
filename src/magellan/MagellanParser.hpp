@@ -67,9 +67,10 @@ public:
 
   /**
    * update the state machine, read new data, ...
+   * @return true if values have changed
    * @note call in loop()
    */
-  void update();
+  bool update();
 
   bool is_ready() const { return ready; }
 
@@ -171,6 +172,7 @@ private:
    * @param type the type of the message
    * @param payload the message data. does not include the message type
    * @param len the length of the message data
+   * @return were any state values updated?
    */
-  void process_message(const message_type_t type, const char* payload, const uint8_t len);
+  bool process_message(const message_type_t type, const char* payload, const uint8_t len);
 };
