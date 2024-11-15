@@ -23,6 +23,7 @@ void setup()
   spaceMouse.begin();
   magellan.begin(&Serial1);
 
+  // note: Serial is the USB serial port, Serial1 is the hardware serial port
   Serial.begin(115200);
   Serial.println("Hello, world!");
 
