@@ -19,7 +19,6 @@ void setup()
   spaceMouse.set_rotation(0.0f, 0.0f, 0.0f);
   spaceMouse.set_button(1, false);
   spaceMouse.set_button(HIDSpaceMouse::KnownButton::DUMMY, false);
-
   spaceMouse.submit();
 
   setup_end_millis = millis();
@@ -29,8 +28,16 @@ void loop()
 {
   if (magellan.update())
   {
-    // something changed!
-    Serial.print("x: ");
+    // something changed, submit new values
+    spaceMouse.set_translation(magellan.get_x(), magellan.get_y(), magellan.get_z());
+    spaceMouse.set_rotation(magellan.get_u(), magellan.get_v(), magellan.get_w());
+
+    // TODO: handle buttons too
+
+    spaceMouse.submit();
+
+    // debug print to console
+    Serial.print("[SM submit]: x: ");
     Serial.print(magellan.get_x());
     Serial.print(", y: ");
     Serial.print(magellan.get_y());
