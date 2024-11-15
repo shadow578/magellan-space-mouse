@@ -14,7 +14,7 @@ constexpr float v_correction = 1.0f; // rotation around y axis
 constexpr float w_correction = 1.0f; // rotation around z axis
 
 HIDSpaceMouse spaceMouse;
-MagellanParser magellan;
+MagellanParser magellan(&Serial); // debug output to USB serial port
 
 uint32_t setup_end_millis;
 

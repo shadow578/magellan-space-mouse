@@ -142,6 +142,14 @@ bool MagellanParser::update()
         {
           // unknown message
           this->message_type = UNKNOWN;
+
+          if (this->log != nullptr)
+          {
+            this->log->print(F("[Magellan] got unknown message type: \""));
+            this->log->print(c);
+            this->log->println(F("\""));
+          }
+
           break;
         }
         
@@ -170,6 +178,11 @@ bool MagellanParser::update()
       {
         // buffer overflow, wait until the message ends and drop it
         this->state = WAIT_MESSAGE_END;
+
+        if (this->log != nullptr)
+        {
+          this->log->println(F("[Magellan] buffer overflow, entering WAIT_MESSAGE_END state"));
+        }
       }
       return false;
     }
@@ -192,20 +205,53 @@ bool MagellanParser::update()
 
 void MagellanParser::send_command(const char* command)
 {
+  if (this->log != nullptr)
+  {
+    this->log->print(F("[Magellan] send_command("));
+    this->log->print(command);
+    this->log->println(F(")"));
+  }
+  
   this->serial->print(command);
   this->serial->flush();
 }
 
 bool MagellanParser::process_message(const message_type_t type, const char* payload, const uint8_t len)
 {
+  if (this->log != nullptr)
+  {
+    this->log->print(F("[Magellan] process_message("));
+    this->log->print(static_cast<char>(type));
+    this->log->print(F(", \""));
+    this->log->print(payload);
+    this->log->print(F("\", "));
+    this->log->print(len);
+    this->log->println(F(")"));
+  }
+
   switch (type)
   {
     case VERSION:
     {
+      if (this->log != nullptr)
+      {
+        this->log->print(F("[Magellan] got version \""));
+        this->log->print(payload);
+      }
+
       // validate version includes 'MAGELLAN'
       if (strstr(payload, VERSION_MAGIC) == nullptr)
       {
+        if (this->log != nullptr)
+        {
+          this->log->println(F("\" (FAULT)"));
+        }
         return false;
+      }
+
+      if (this->log != nullptr)
+      {
+        this->log->println(F("\" (OK)"));
       }
 
       this->ready = true;
@@ -224,6 +270,13 @@ bool MagellanParser::process_message(const message_type_t type, const char* payl
       const uint8_t k2 = decode_nibble(payload[2]);
 
       this->buttons = k2 << 8 | k1 << 4 | k0;
+
+      if (this->log != nullptr)
+      {
+        this->log->print(F("[Magellan] got keypress: "));
+        this->log->println(this->buttons, BIN);
+      }
+
       return true;
     }
     case POSITION_ROTATION:
@@ -251,6 +304,26 @@ bool MagellanParser::process_message(const message_type_t type, const char* payl
       this->u = u / D;
       this->v = v / D;
       this->w = w / D;
+
+      if (this->log != nullptr)
+      {
+        #define PRINT_VALUE(name, normalized, raw)  \
+          this->log->print(F(name "="));       \
+          this->log->print(normalized, 2);          \
+          this->log->print(F(" ("));                \
+          this->log->print(raw);                    \
+          this->log->print(F(")"))
+
+        this->log->print(F("[Magellan] got position/rotation:"));
+        PRINT_VALUE("x", this->x, x);
+        PRINT_VALUE(", y", this->y, y);
+        PRINT_VALUE(", z", this->z, z);
+        PRINT_VALUE(", u", this->u, u);
+        PRINT_VALUE(", v", this->v, v);
+        PRINT_VALUE(", w", this->w, w);
+        this->log->println();
+      }
+
       return true;
     }
     case MODE_CHANGE:
@@ -261,7 +334,14 @@ bool MagellanParser::process_message(const message_type_t type, const char* payl
         return false;
       }
 
-      this->mode = decode_nibble(payload[0]);;
+      this->mode = decode_nibble(payload[0]);
+
+      if (this->log != nullptr)
+      {
+        this->log->print(F("[Magellan] got mode: "));
+        this->log->println(this->mode);
+      }
+
       return true;
     }
     default:

@@ -46,6 +46,11 @@ namespace magellan_internal
 class MagellanParser
 {
 public:
+  MagellanParser(Print *log = nullptr)
+  {
+    this->log = log;
+  }
+
   /**
    * setup the space mouse and initialize
    * @param serial the serial port to use. must be exclusive to the space mouse
@@ -56,6 +61,11 @@ public:
    */
   inline void begin(HardwareSerial *serial)
   {
+    if (this->log != nullptr)
+    {
+      this->log->println(F("[Magellan] begin()"));
+    }
+
     this->serial = serial;
     this->serial->begin(9600);
 
@@ -67,6 +77,11 @@ public:
    */
   inline void reset()
   {
+    if (this->log != nullptr)
+    {
+      this->log->println(F("[Magellan] reset()"));
+    }
+
     this->state = INIT_RESET;
     this->ready = false;
   }
@@ -193,4 +208,7 @@ private:
    * @return were any state values updated?
    */
   bool process_message(const message_type_t type, const char* payload, const uint8_t len);
+
+private:
+  Print *log = nullptr;
 };
