@@ -2,6 +2,17 @@
 #include "spacemouse/HIDSpaceMouse.hpp"
 #include "magellan/MagellanParser.hpp"
 
+// correction factors applied to the values received from the Magellan
+// before being sent to the HIDSpaceMouse.
+// 1.0f means no correction, -1.0f means invert the value.
+// these values be in the range [-1.0f, 1.0f]
+constexpr float x_correction = 1.0f; // x position 
+constexpr float y_correction = 1.0f; // y position 
+constexpr float z_correction = 1.0f; // z position 
+constexpr float u_correction = 1.0f; // rotation around x axis
+constexpr float v_correction = 1.0f; // rotation around y axis
+constexpr float w_correction = 1.0f; // rotation around z axis
+
 HIDSpaceMouse spaceMouse;
 MagellanParser magellan;
 
@@ -29,10 +40,18 @@ void loop()
   if (magellan.update())
   {
     // something changed, submit new values
-    spaceMouse.set_translation(magellan.get_x(), magellan.get_y(), magellan.get_z());
-    spaceMouse.set_rotation(magellan.get_u(), magellan.get_v(), magellan.get_w());
+    spaceMouse.set_translation(
+      magellan.get_x() * x_correction, 
+      magellan.get_y() * y_correction, 
+      magellan.get_z() * z_correction
+    );
+    spaceMouse.set_rotation(
+      magellan.get_u() * u_correction, 
+      magellan.get_v() * v_correction, 
+      magellan.get_w() * w_correction
+    );
 
-    // TODO: handle buttons too
+    // TODO: handle buttons, need mapping for them tho...
 
     spaceMouse.submit();
 
