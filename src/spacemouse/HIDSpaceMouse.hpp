@@ -216,3 +216,6 @@ private:
   void submit_buttons();
 };
 
+// ensure VID and PID are changed as needed
+static_assert(USB_VID == 0x256f, "USB VID must match a 3DConnexion SpaceMouse!");
+static_assert(USB_PID == 0xc631, "USB PID must match a 3DConnexion SpaceMouse!");
