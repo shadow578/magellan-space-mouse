@@ -70,6 +70,18 @@ bool MagellanParser::update()
     return false;
   }
 
+  // re-initialize if not ready after timeout
+  if (!this->ready() && (now - last_reset_millis) > READY_WAIT_TIMEOUT)
+  {
+    if (this->log != nullptr)
+    {
+      this->log->println(F("[Magellan] not ready after timeout, re-initializing"));
+    }
+
+    this->reset();
+    return false;
+  }
+
   const char c = this->serial->read();
 
   switch(this->state)
@@ -79,6 +91,7 @@ bool MagellanParser::update()
     {
       this->send_command(COMMAND_RESET);
       this->wait_until = now + 100; // 100 ms
+      this->last_reset_millis = now;
       return false;
     }
     case INIT_GET_VERSION:
@@ -254,7 +267,7 @@ bool MagellanParser::process_message(const message_type_t type, const char* payl
         this->log->println(F("\" (OK)"));
       }
 
-      this->ready = true;
+      this->hardware_detected = true;
       return true;
     }
     case KEYPRESS:

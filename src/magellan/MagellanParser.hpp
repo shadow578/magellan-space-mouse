@@ -38,6 +38,12 @@ namespace magellan_internal
    * magic string that must be included in the version response
    */
   static const char VERSION_MAGIC[] = "MAGELLAN";
+
+  /**
+   * timeout for waiting for the space mouse to be ready
+   * @note starts at INIT_RESET and is cleared when space mouse reports version and mode 3
+   */
+  constexpr uint32_t READY_WAIT_TIMEOUT = 5000; // 5 seconds
 }
 
 /**
@@ -83,19 +89,23 @@ public:
     }
 
     this->state = INIT_RESET;
-    this->ready = false;
+    this->hardware_detected = false;
+    this->mode = 0;
   }
 
   /**
    * update the state machine, read new data, ...
    * @return true if values have changed
    * @note call in loop()
+   * @note 
+   * must be called even when ready() returns false. 
+   * values are only valid when ready() returns true.
    */
   bool update();
 
-  bool is_ready() const 
+  bool ready() const 
   {
-    return ready && mode == 3;
+    return hardware_detected && mode == 3;
   }
 
   float get_x() const { return x; }
@@ -156,6 +166,11 @@ private:
   uint32_t wait_until = 0;
 
   /**
+   * last time the RESET command was sent
+   */
+  uint32_t last_reset_millis = 0;
+
+  /**
    * buffer for incoming data
    */
   char rx_buffer[256];
@@ -166,9 +181,9 @@ private:
   uint8_t rx_len = 0;
 
   /**
-   * is the remote initialized and ready?
+   * was the remote hardware detected to be a Magellan space mouse?
    */
-  bool ready = false;
+  bool hardware_detected = false;
 
   /**
    * mode as reported by the space mouse. should be 3.

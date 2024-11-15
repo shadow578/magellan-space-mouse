@@ -38,23 +38,25 @@ void setup()
 
 void loop()
 {
-  if (magellan.update() && magellan.is_ready())
+  if (magellan.update())
   {
-    // something changed, submit new values
-    spaceMouse.set_translation(
-      magellan.get_x() * x_correction, 
-      magellan.get_y() * y_correction, 
-      magellan.get_z() * z_correction
-    );
-    spaceMouse.set_rotation(
-      magellan.get_u() * u_correction, 
-      magellan.get_v() * v_correction, 
-      magellan.get_w() * w_correction
-    );
+    if (magellan.ready())
+    {
+      spaceMouse.set_translation(
+        magellan.get_x() * x_correction, 
+        magellan.get_y() * y_correction, 
+        magellan.get_z() * z_correction
+      );
+      spaceMouse.set_rotation(
+        magellan.get_u() * u_correction, 
+        magellan.get_v() * v_correction, 
+        magellan.get_w() * w_correction
+      );
 
-    // TODO: handle buttons, need mapping for them tho...
+      // TODO: handle buttons, need mapping for them tho...
 
-    spaceMouse.submit();
+      spaceMouse.submit();
+    }
 
     // debug print to console
     Serial.print("[SM submit]: x: ");
@@ -72,14 +74,5 @@ void loop()
     Serial.print(", buttons: ");
     Serial.print(magellan.get_buttons(), BIN);
     Serial.println();
-  }
-
-  if (!magellan.is_ready() && (millis() - setup_end_millis > 5000))
-  {
-    // not ready after 5 seconds, something is wrong!
-    Serial.println("Magellan is not ready after >5 seconds!");
-    setup_end_millis = millis();
-
-    magellan.reset();
   }
 }
