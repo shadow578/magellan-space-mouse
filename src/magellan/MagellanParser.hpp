@@ -78,7 +78,10 @@ public:
    */
   bool update();
 
-  bool is_ready() const { return ready; }
+  bool is_ready() const 
+  {
+    return ready && mode == 3;
+  }
 
   float get_x() const { return x; }
   float get_y() const { return y; }
@@ -114,6 +117,7 @@ private:
     VERSION = 'v',           // version message
     KEYPRESS = 'k',          // keypress message
     POSITION_ROTATION = 'd', // position and rotation message
+    MODE_CHANGE = 'm'        // mode change message
   };
 
   /**
@@ -150,6 +154,11 @@ private:
    * is the remote initialized and ready?
    */
   bool ready = false;
+
+  /**
+   * mode as reported by the space mouse. should be 3.
+   */
+  uint8_t mode = 0;
 
   /**
    * internal state values, normalized to -1.0 to 1.0

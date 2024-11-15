@@ -132,6 +132,12 @@ bool MagellanParser::update()
           this->message_type = POSITION_ROTATION;
           break;
         }
+        case 'm':
+        {
+          // mode change message
+          this->message_type = MODE_CHANGE;
+          break;
+        }
         default:
         {
           // unknown message
@@ -245,6 +251,17 @@ bool MagellanParser::process_message(const message_type_t type, const char* payl
       this->u = u / D;
       this->v = v / D;
       this->w = w / D;
+      return true;
+    }
+    case MODE_CHANGE:
+    {
+      // expect 1 character in the payload
+      if (len != 1)
+      {
+        return false;
+      }
+
+      this->mode = decode_nibble(payload[0]);;
       return true;
     }
     default:
