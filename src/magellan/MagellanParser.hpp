@@ -81,10 +81,11 @@ public:
   float get_v() const { return v; }
   float get_w() const { return w; }
 
+  uint16_t get_buttons() const { return buttons; }
   bool get_button(const uint8_t button) const
   {
-    assert(button < 8);
-    return buttons[button];
+    assert(button < 12);
+    return buttons & (1 << button);
   }
 
 private:
@@ -155,9 +156,11 @@ private:
         w = 0.0f; // rz
 
   /**
-   * internal state values for all buttons
+   * internal state values for all buttons.
+   * @note up to 12 buttons are supported.
+   * @note each button is represented by a single bit. top 4 bits are unused.
    */
-  bool buttons[8];
+  uint16_t buttons = 0;
 
 private:
   /**

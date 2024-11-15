@@ -217,9 +217,7 @@ bool MagellanParser::process_message(const message_type_t type, const char* payl
       const uint8_t k1 = decode_nibble(payload[1]);
       const uint8_t k2 = decode_nibble(payload[2]);
 
-      const uint16_t keys = k2 << 8 | k1 << 4 | k0;
-
-      // TODO parse key presses
+      this->buttons = k2 << 8 | k1 << 4 | k0;
       return true;
     }
     case POSITION_ROTATION:
