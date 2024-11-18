@@ -309,134 +309,23 @@ bool MagellanParser::process_message(const message_type_t type, const char* payl
   {
     case VERSION:
     {
-      if (this->log != nullptr)
-      {
-        this->log->print(F("[Magellan] got version \""));
-        this->log->print(payload);
-      }
-
-      // validate version includes 'MAGELLAN'
-      if (strstr(payload, VERSION_MAGIC) == nullptr)
-      {
-        if (this->log != nullptr)
-        {
-          this->log->println(F("\" (FAULT)"));
-        }
-        return false;
-      }
-
-      if (this->log != nullptr)
-      {
-        this->log->println(F("\" (OK)"));
-      }
-
-      // advance init state if waiting for version
-      if (this->init_state == WAIT_VERSION)
-      {
-        this->init_state = REQUEST_BUTTON_REPORTING;
-      }
-      return true;
+      return process_version(payload, len);
     }
     case KEYPRESS:
     {
-      // expect 3 characters in the payload
-      if (len != 3)
-      {
-        return false;
-      }
-
-      const uint8_t k0 = decode_nibble(payload[0]);
-      const uint8_t k1 = decode_nibble(payload[1]);
-      const uint8_t k2 = decode_nibble(payload[2]);
-
-      this->buttons = k2 << 8 | k1 << 4 | k0;
-
-      if (this->log != nullptr)
-      {
-        this->log->print(F("[Magellan] got keypress: "));
-        this->log->println(this->buttons, BIN);
-      }
-
-      return true;
+      return process_keypress(payload, len);
     }
     case POSITION_ROTATION:
     {
-      // expect 24 characters in the payload 
-      // (mode 3 = position and rotation)
-      if (len != 24)
-      {
-        return false;
-      }
-
-      // get raw values
-      const int16_t x = decode_signed_word(payload + 0);
-      const int16_t y = decode_signed_word(payload + 8);
-      const int16_t z = decode_signed_word(payload + 4);
-      const int16_t u = decode_signed_word(payload + 20); // theta X = rX
-      const int16_t v = decode_signed_word(payload + 12); // theta Y = rY
-      const int16_t w = decode_signed_word(payload + 16); // theta Z = rZ
-
-      // normalize values to be in the range [-1.0, 1.0]
-      constexpr float D = 32767.0f;
-      this->x = x / D;
-      this->y = y / D;
-      this->z = z / D;
-      this->u = u / D;
-      this->v = v / D;
-      this->w = w / D;
-
-      if (this->log != nullptr)
-      {
-        #define PRINT_VALUE(name, normalized, raw)  \
-          this->log->print(F(name "="));       \
-          this->log->print(normalized, 2);          \
-          this->log->print(F(" ("));                \
-          this->log->print(raw);                    \
-          this->log->print(F(")"))
-
-        this->log->print(F("[Magellan] got position/rotation:"));
-        PRINT_VALUE("x", this->x, x);
-        PRINT_VALUE(", y", this->y, y);
-        PRINT_VALUE(", z", this->z, z);
-        PRINT_VALUE(", u", this->u, u);
-        PRINT_VALUE(", v", this->v, v);
-        PRINT_VALUE(", w", this->w, w);
-        this->log->println();
-      }
-
-      return true;
+      return process_position_rotation(payload, len);
     }
     case MODE_CHANGE:
     {
-      // expect 1 character in the payload
-      if (len != 1)
-      {
-        return false;
-      }
-
-      this->mode = decode_nibble(payload[0]);
-
-      if (this->log != nullptr)
-      {
-        this->log->print(F("[Magellan] got mode: "));
-        this->log->println(this->mode);
-      }
-
-      return true;
+      return process_mode_change(payload, len);
     }
     case ZERO:
     {
-      // don't care about the payload
-      if (this->log != nullptr)
-      {
-        this->log->println(F("[Magellan] got zeroed"));
-      }
-
-      // advance init state if waiting for zero
-      if (this->init_state == WAIT_ZERO)
-      {
-        this->init_state = DONE;
-      }
+      return process_zero(payload, len);
     }
     default:
     {
@@ -444,4 +333,142 @@ bool MagellanParser::process_message(const message_type_t type, const char* payl
       return false;
     }
   }
+}
+
+bool MagellanParser::process_version(const char* payload, const uint8_t len)
+{
+  if (this->log != nullptr)
+  {
+    this->log->print(F("[Magellan] got version \""));
+    this->log->print(payload);
+  }
+
+  // validate version includes 'MAGELLAN'
+  if (strstr(payload, VERSION_MAGIC) == nullptr)
+  {
+    if (this->log != nullptr)
+    {
+      this->log->println(F("\" (FAULT)"));
+    }
+    return false;
+  }
+
+  if (this->log != nullptr)
+  {
+    this->log->println(F("\" (OK)"));
+  }
+
+  // advance init state if waiting for version
+  if (this->init_state == WAIT_VERSION)
+  {
+    this->init_state = REQUEST_BUTTON_REPORTING;
+  }
+  return true;
+}
+
+bool MagellanParser::process_mode_change(const char* payload, const uint8_t len)
+{
+  // expect 1 character in the payload
+  if (len != 1)
+  {
+    return false;
+  }
+
+  this->mode = decode_nibble(payload[0]);
+
+  if (this->log != nullptr)
+  {
+    this->log->print(F("[Magellan] got mode: "));
+    this->log->println(this->mode);
+  }
+
+  return true;
+}
+
+bool MagellanParser::process_zero(const char* payload, const uint8_t len)
+{
+  // don't care about the payload, there should be none
+  if (this->log != nullptr)
+  {
+    this->log->println(F("[Magellan] got zeroed"));
+  }
+
+  // advance init state if waiting for zero
+  if (this->init_state == WAIT_ZERO)
+  {
+    this->init_state = DONE;
+  }
+}
+
+bool MagellanParser::process_keypress(const char* payload, const uint8_t len)
+{
+  // expect 3 characters in the payload
+  if (len != 3)
+  {
+    return false;
+  }
+
+  const uint8_t k0 = decode_nibble(payload[0]);
+  const uint8_t k1 = decode_nibble(payload[1]);
+  const uint8_t k2 = decode_nibble(payload[2]);
+
+  this->buttons = k2 << 8 | k1 << 4 | k0;
+
+  if (this->log != nullptr)
+  {
+    this->log->print(F("[Magellan] got keypress: "));
+    this->log->println(this->buttons, BIN);
+  }
+
+  return true;
+}
+
+bool MagellanParser::process_position_rotation(const char* payload, const uint8_t len)
+{
+  // TODO: handle modes other than mode 3?
+
+  // expect 24 characters in the payload 
+  // (mode 3 = position and rotation)
+  if (len != 24)
+  {
+    return false;
+  }
+
+  // get raw values
+  const int16_t x = decode_signed_word(payload + 0);
+  const int16_t y = decode_signed_word(payload + 8);
+  const int16_t z = decode_signed_word(payload + 4);
+  const int16_t u = decode_signed_word(payload + 20); // theta X = rX
+  const int16_t v = decode_signed_word(payload + 12); // theta Y = rY
+  const int16_t w = decode_signed_word(payload + 16); // theta Z = rZ
+
+  // normalize values to be in the range [-1.0, 1.0]
+  constexpr float D = 32767.0f;
+  this->x = x / D;
+  this->y = y / D;
+  this->z = z / D;
+  this->u = u / D;
+  this->v = v / D;
+  this->w = w / D;
+
+  if (this->log != nullptr)
+  {
+    #define PRINT_VALUE(name, normalized, raw)  \
+      this->log->print(F(name "="));       \
+      this->log->print(normalized, 2);          \
+      this->log->print(F(" ("));                \
+      this->log->print(raw);                    \
+      this->log->print(F(")"))
+
+    this->log->print(F("[Magellan] got position/rotation:"));
+    PRINT_VALUE("x", this->x, x);
+    PRINT_VALUE(", y", this->y, y);
+    PRINT_VALUE(", z", this->z, z);
+    PRINT_VALUE(", u", this->u, u);
+    PRINT_VALUE(", v", this->v, v);
+    PRINT_VALUE(", w", this->w, w);
+    this->log->println();
+  }
+
+  return true;
 }
