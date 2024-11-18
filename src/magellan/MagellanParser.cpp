@@ -84,7 +84,8 @@ void MagellanParser::update_init()
 
   // if more than 5 seconds have passed since the last reset, we're probably stuck
   // try resetting the device and starting over
-  if ((now - this->last_reset_millis) > READY_WAIT_TIMEOUT)
+  const bool stuck = (now - this->last_reset_millis) > READY_WAIT_TIMEOUT;
+  if (stuck && this->init_state != RESET)
   {
     if (this->log != nullptr)
     {
