@@ -84,8 +84,9 @@ void MagellanParser::update_init()
 
   // if more than 5 seconds have passed since the last reset, we're probably stuck
   // try resetting the device and starting over
+  // do not trigger a re-init when we're already in the reset state OR when we're done
   const bool stuck = (now - this->last_reset_millis) > READY_WAIT_TIMEOUT;
-  if (stuck && this->init_state != RESET)
+  if (stuck && this->init_state != RESET && this->init_state != DONE)
   {
     if (this->log != nullptr)
     {
@@ -236,10 +237,15 @@ bool MagellanParser::update_rx(const char c)
 
           break;
         }
-        
-        this->rx_state = READ_MESSAGE;
       }
 
+      if (this->log != nullptr)
+      {
+        this->log->print("[Magellan] got message type: ");
+        this->log->println(this->message_type);
+      }
+      
+      this->rx_state = READ_MESSAGE;
       return false;
     }
     case READ_MESSAGE:
@@ -247,8 +253,9 @@ bool MagellanParser::update_rx(const char c)
       // is this the end of the message?
       if (c == MESSAGE_END)
       {
-        rx_buffer[rx_len] = '\0'; // ensure null-termination
+        this->rx_state = IDLE; // prepare for next message
 
+        rx_buffer[rx_len] = '\0'; // ensure null-termination
         return process_message(this->message_type, rx_buffer, rx_len);
       }
 

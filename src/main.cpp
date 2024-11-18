@@ -7,6 +7,8 @@
   #warning "GIT_VERSION_STRING not defined! check your build environment."
 #endif
 
+#define WAIT_FOR_SERIAL 1
+
 // correction factors applied to the values received from the Magellan
 // before being sent to the HIDSpaceMouse.
 // 1.0f means no correction, -1.0f means invert the value.
@@ -28,8 +30,14 @@ void setup()
 
   // note: Serial is the USB serial port, Serial1 is the hardware serial port
   Serial.begin(115200);
+
+  #if WAIT_FOR_SERIAL
+    // wait for host to open serial port
+    while(!Serial) ;
+  #endif
+
   Serial.println("[Main] setup()");
-  Serial.println(GIT_VERSION_STRING);
+  Serial.println("[Main] version: " GIT_VERSION_STRING);
 }
 
 void loop()
