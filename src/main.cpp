@@ -2,6 +2,11 @@
 #include "spacemouse/HIDSpaceMouse.hpp"
 #include "magellan/MagellanParser.hpp"
 
+#if !defined(GIT_VERSION_STRING)
+  #define GIT_VERSION_STRING "unknown"
+  #warning "GIT_VERSION_STRING not defined! check your build environment."
+#endif
+
 // correction factors applied to the values received from the Magellan
 // before being sent to the HIDSpaceMouse.
 // 1.0f means no correction, -1.0f means invert the value.
@@ -16,8 +21,6 @@ constexpr float w_correction = 1.0f; // rotation around z axis
 HIDSpaceMouse spaceMouse;
 MagellanParser magellan(&Serial); // debug output to USB serial port
 
-uint32_t setup_end_millis;
-
 void setup()
 {
   spaceMouse.begin();
@@ -25,15 +28,8 @@ void setup()
 
   // note: Serial is the USB serial port, Serial1 is the hardware serial port
   Serial.begin(115200);
-  Serial.println("Hello, world!");
-
-  spaceMouse.set_translation(0.0f, 0.0f, 0.0f);
-  spaceMouse.set_rotation(0.0f, 0.0f, 0.0f);
-  spaceMouse.set_button(1, false);
-  spaceMouse.set_button(HIDSpaceMouse::KnownButton::DUMMY, false);
-  spaceMouse.submit();
-
-  setup_end_millis = millis();
+  Serial.println("[Main] setup()");
+  Serial.println(GIT_VERSION_STRING);
 }
 
 void loop()
@@ -58,20 +54,20 @@ void loop()
       spaceMouse.submit();
     }
 
-    // debug print to console
-    Serial.print("[SM submit]: x: ");
+    // debug print to console even when not ready
+    Serial.print("[Main]: x=");
     Serial.print(magellan.get_x());
-    Serial.print(", y: ");
+    Serial.print(", y=");
     Serial.print(magellan.get_y());
-    Serial.print(", z: ");
+    Serial.print(", z=");
     Serial.print(magellan.get_z());
-    Serial.print(", u: ");
+    Serial.print(", u=");
     Serial.print(magellan.get_u());
-    Serial.print(", v: ");
+    Serial.print(", v=");
     Serial.print(magellan.get_v());
-    Serial.print(", w: ");
+    Serial.print(", w=");
     Serial.print(magellan.get_w());
-    Serial.print(", buttons: ");
+    Serial.print(", buttons=");
     Serial.print(magellan.get_buttons(), BIN);
     Serial.println();
   }
