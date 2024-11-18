@@ -57,69 +57,126 @@ static int16_t decode_signed_word(const char* buffer)
 
 bool MagellanParser::update()
 {
+  update_init();
+
+  if (this->serial->available() != 0)
+  {
+    const char c = this->serial->read();
+    return update_rx(c);
+  }
+}
+
+void MagellanParser::update_init()
+{
+  // should we wait?
   const uint32_t now = millis();
-  if (now < this->wait_until)
+  if (now < this->init_wait_until)
   {
-    // have to wait
-    return false;
+    return;
   }
 
-  if (this->serial->available() == 0)
-  {
-    // no data available
-    return false;
-  }
-
-  // re-initialize if not ready after timeout
-  if (!this->ready() && (now - last_reset_millis) > READY_WAIT_TIMEOUT)
+  // if more than 5 seconds have passed since the last reset, we're probably stuck
+  // try resetting the device and starting over
+  if ((now - this->last_reset_millis) > READY_WAIT_TIMEOUT)
   {
     if (this->log != nullptr)
     {
-      this->log->println(F("[Magellan] not ready after timeout, re-initializing"));
+      this->log->print(F("[Magellan] seems stuck at init_state="));
+      this->log->print(this->init_state);
+      this->log->println(F(", re-initializing..."));
     }
 
     this->reset();
-    return false;
+    return;
   }
 
-  const char c = this->serial->read();
-
-  switch(this->state)
+  switch(this->init_state)
   {
-//#region initialization sequence
-    case INIT_RESET:
+    case RESET:
     {
       this->send_command(COMMAND_RESET);
-      this->wait_until = now + 100; // 100 ms
+      this->init_wait_until = now + 500; // wait 500 ms
       this->last_reset_millis = now;
-      return false;
+      this->init_state = REQUEST_VERSION;
+      break;
     }
-    case INIT_GET_VERSION:
+    case REQUEST_VERSION:
     {
       this->send_command(COMMAND_GET_VERSION);
-      this->wait_until = now + 100; // 100 ms
-      return false;
+      this->init_state = WAIT_VERSION;
+      break;
     }
-    case INIT_ENABLE_BUTTON_REPORTING:
+    case WAIT_VERSION:
+    {
+      // wait for version message
+      // this state is advanced in process_message()
+      break;
+    }
+    case REQUEST_BUTTON_REPORTING:
     {
       this->send_command(COMMAND_ENABLE_BUTTON_REPORTING);
-      this->wait_until = now + 100; // 100 ms
-      return false;
+      
+      // FIXME: can't implement WAIT_BUTTON_REPORTING since idk how the space mouse
+      // ACKs the command, so just wait a bit and hope for the best...
+
+      // this->init_state = WAIT_BUTTON_REPORTING;
+      this->init_wait_until = now + 500; // wait 500 ms
+      this->init_state = REQUEST_SET_MODE;
+
+      break;
     }
-    case INIT_SET_MODE:
+    case WAIT_BUTTON_REPORTING:
+    {
+      // wait for button reporting to be enabled
+      // this state is advanced in process_message()
+      break;
+    }
+    case REQUEST_SET_MODE:
     {
       this->send_command(COMMAND_SET_MODE3);
-      this->wait_until = now + 100; // 100 ms
-      return false;
+      this->init_state = WAIT_SET_MODE;
+      break;
     }
-    case INIT_ZERO:
+    case WAIT_SET_MODE:
+    {
+      // wait for mode to be set
+      // mode is parsed in process_message()
+      if (this->mode == 3)
+      {
+        this->init_state = REQUEST_ZERO;
+      }
+      break;
+    }
+    case REQUEST_ZERO:
     {
       this->send_command(COMMAND_ZERO);
-      this->wait_until = now + 100; // 100 ms
-      return false;
+      this->init_state = WAIT_ZERO;
+      break;
     }
-//#endregion
+    case WAIT_ZERO:
+    {
+      // wait for zero command to be acknowledged
+      // this state is advanced in process_message()
+      break;
+    }
+    case DONE:
+    {
+      // initialization is complete
+      break;
+    }
+    default:
+    {
+      // unknown state, reset to RESET
+      this->init_state = RESET;
+      break;
+    }
+  }
+}
 
+bool MagellanParser::update_rx(const char c)
+{
+  switch(this->rx_state)
+  {
     case IDLE:
     {
       // reset message buffer
@@ -151,6 +208,12 @@ bool MagellanParser::update()
           this->message_type = MODE_CHANGE;
           break;
         }
+        case 'z':
+        {
+          // zeroed message
+          this->message_type = ZERO;
+          break;
+        }
         default:
         {
           // unknown message
@@ -166,7 +229,7 @@ bool MagellanParser::update()
           break;
         }
         
-        this->state = READ_MESSAGE;
+        this->rx_state = READ_MESSAGE;
       }
 
       return false;
@@ -190,7 +253,7 @@ bool MagellanParser::update()
       else
       {
         // buffer overflow, wait until the message ends and drop it
-        this->state = WAIT_MESSAGE_END;
+        this->rx_state = WAIT_MESSAGE_END;
 
         if (this->log != nullptr)
         {
@@ -203,14 +266,14 @@ bool MagellanParser::update()
     {
       if (c == MESSAGE_END)
       {
-        this->state = IDLE;
+        this->rx_state = IDLE;
       }
       return false;
     }
     default:
     {
       // unknown state, reset to IDLE
-      this->state = IDLE;
+      this->rx_state = IDLE;
       return false;
     }
   }
@@ -267,7 +330,11 @@ bool MagellanParser::process_message(const message_type_t type, const char* payl
         this->log->println(F("\" (OK)"));
       }
 
-      this->hardware_detected = true;
+      // advance init state if waiting for version
+      if (this->init_state == WAIT_VERSION)
+      {
+        this->init_state = REQUEST_BUTTON_REPORTING;
+      }
       return true;
     }
     case KEYPRESS:
@@ -356,6 +423,20 @@ bool MagellanParser::process_message(const message_type_t type, const char* payl
       }
 
       return true;
+    }
+    case ZERO:
+    {
+      // don't care about the payload
+      if (this->log != nullptr)
+      {
+        this->log->println(F("[Magellan] got zeroed"));
+      }
+
+      // advance init state if waiting for zero
+      if (this->init_state == WAIT_ZERO)
+      {
+        this->init_state = DONE;
+      }
     }
     default:
     {

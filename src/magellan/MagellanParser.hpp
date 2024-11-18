@@ -88,9 +88,21 @@ public:
       this->log->println(F("[Magellan] reset()"));
     }
 
-    this->state = INIT_RESET;
-    this->hardware_detected = false;
+    this->init_state == RESET;
+    this->init_wait_until = 0;
+    this->last_reset_millis = 0;
     this->mode = 0;
+
+    this->rx_state = IDLE;
+
+    this->x = 0.0f;
+    this->y = 0.0f;
+    this->z = 0.0f;
+    this->u = 0.0f;
+    this->v = 0.0f;
+    this->w = 0.0f;
+
+    this->buttons = 0;
   }
 
   /**
@@ -105,7 +117,7 @@ public:
 
   bool ready() const 
   {
-    return hardware_detected && mode == 3;
+    return init_state == DONE;
   }
 
   float get_x() const { return x; }
@@ -123,14 +135,54 @@ public:
   }
 
 private:
-  enum state_t
-  {
-    INIT_RESET,                   // send reset command, wait 100ms
-    INIT_GET_VERSION,             // send get version command, wait 100ms
-    INIT_ENABLE_BUTTON_REPORTING, // send enable button reporting command, wait 100ms
-    INIT_SET_MODE,                // send set mode command, wait 100ms
-    INIT_ZERO,                    // send zero command, wait 100ms
+  /**
+   * the serial port to use
+   */
+  HardwareSerial *serial;
 
+  enum init_state_t
+  {
+    RESET,                    // send reset command, wait 100ms
+    REQUEST_VERSION,          // send get version command
+    WAIT_VERSION,             // wait for version response
+    REQUEST_BUTTON_REPORTING, // send enable button reporting command
+    WAIT_BUTTON_REPORTING,    // wait for button reporting to be enabled
+    REQUEST_SET_MODE,         // send set mode command
+    WAIT_SET_MODE,            // wait for mode to be set
+    REQUEST_ZERO,             // send zero command
+    WAIT_ZERO,                // wait for zero command to be acknowledged
+    DONE                      // init sequence is complete
+  };
+
+  /**
+   * current state of the init sequence state machine
+   */
+  init_state_t init_state = RESET;
+
+  /**
+   * wait time before next state advance in init sequence
+   */
+  uint32_t init_wait_until = 0;
+
+  /**
+   * last time the RESET command was sent
+   */
+  uint32_t last_reset_millis = 0;
+
+  /**
+   * mode as reported by the space mouse.
+   * @note expected to be 3 normally.
+   */
+  uint8_t mode = 0;
+
+  /**
+   * update init sequence
+   */
+  void update_init();
+
+private:
+  enum rx_state_t
+  {
     IDLE,                         // waiting for start of message
     READ_MESSAGE,                 // read message data until MESSAGE_END separator
     WAIT_MESSAGE_END              // wait for MESSAGE_END separator, drop all data
@@ -142,33 +194,19 @@ private:
     VERSION = 'v',           // version message
     KEYPRESS = 'k',          // keypress message
     POSITION_ROTATION = 'd', // position and rotation message
-    MODE_CHANGE = 'm'        // mode change message
+    MODE_CHANGE = 'm',       // mode change message
+    ZERO = 'z'               // zeroed message
   };
 
   /**
-   * the serial port to use
+   * current state of the RX state machine
    */
-  HardwareSerial *serial;
-
-  /**
-   * current state of the state machine
-   */
-  state_t state = INIT_RESET;
+  rx_state_t rx_state = IDLE;
 
   /**
    * current message type, when in READ_MESSAGE state
    */
   message_type_t message_type;
-
-  /**
-   * wait time before next state advance
-   */
-  uint32_t wait_until = 0;
-
-  /**
-   * last time the RESET command was sent
-   */
-  uint32_t last_reset_millis = 0;
 
   /**
    * buffer for incoming data
@@ -181,14 +219,11 @@ private:
   uint8_t rx_len = 0;
 
   /**
-   * was the remote hardware detected to be a Magellan space mouse?
+   * update RX state machine
+   * @param c the character to process
+   * @return true if a message was processed
    */
-  bool hardware_detected = false;
-
-  /**
-   * mode as reported by the space mouse. should be 3.
-   */
-  uint8_t mode = 0;
+  bool update_rx(const char c);
 
   /**
    * internal state values, normalized to -1.0 to 1.0
