@@ -64,6 +64,8 @@ bool MagellanParser::update()
     const char c = this->serial->read();
     return update_rx(c);
   }
+
+  return false;
 }
 
 void MagellanParser::update_init()
@@ -350,7 +352,8 @@ bool MagellanParser::process_version(const char* payload, const uint8_t len)
     {
       this->log->println(F("\" (FAULT)"));
     }
-    return false;
+    
+    return true;
   }
 
   if (this->log != nullptr)
@@ -398,6 +401,8 @@ bool MagellanParser::process_zero(const char* payload, const uint8_t len)
   {
     this->init_state = DONE;
   }
+
+  return true;
 }
 
 bool MagellanParser::process_keypress(const char* payload, const uint8_t len)

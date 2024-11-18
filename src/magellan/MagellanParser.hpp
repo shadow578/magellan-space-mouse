@@ -88,7 +88,7 @@ public:
       this->log->println(F("[Magellan] reset()"));
     }
 
-    this->init_state == RESET;
+    this->init_state = RESET;
     this->init_wait_until = 0;
     this->last_reset_millis = 0;
     this->mode = 0;
