@@ -1,5 +1,10 @@
 #include "MagellanParser.hpp"
 
+// delay between sending each character of a command
+// can be used to slow down communication to the 
+// Magellan to compensate for missing flow control
+#define SEND_INTER_CHARACTER_DELAY 5 // ms; 0 to disable
+
 using namespace magellan_internal;
 
 /**
@@ -289,9 +294,21 @@ void MagellanParser::send_command(const char* command)
     this->log->print(command);
     this->log->println(F(")"));
   }
-  
-  this->serial->print(command);
-  this->serial->flush();
+
+  #if SEND_INTER_CHARACTER_DELAY > 0
+    // write each character individually, with a delay between each
+    // the Magellan normally uses hardware flow control, but the hardware 
+    // isn't set up for it...
+    for (uint8_t i = 0; command[i] != '\0'; i++)
+    {
+      this->serial->write(command[i]);
+      this->serial->flush();
+      delay(1);
+    } 
+  #else
+    this->serial->print(command);
+    this->serial->flush();
+  #endif
 }
 
 bool MagellanParser::process_message(const message_type_t type, const char* payload, const uint8_t len)
@@ -352,7 +369,7 @@ bool MagellanParser::process_version(const char* payload, const uint8_t len)
     {
       this->log->println(F("\" (FAULT)"));
     }
-    
+
     return true;
   }
 

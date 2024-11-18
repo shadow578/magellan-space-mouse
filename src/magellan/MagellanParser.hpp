@@ -247,6 +247,7 @@ private:
    * send a command to the space mouse
    * @param command the command to send
    * @note adding MESSAGE_END is the responsibility of the caller
+   * @note this function may block for a few hundred milliseconds
    */
   void send_command(const char* command);
 
