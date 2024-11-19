@@ -2,7 +2,18 @@
 #include <Arduino.h>
 #include <PluggableUSB.h>
 #include <HID.h>
-#include <assert.h>
+#include "../util.hpp"
+
+// change how ENSURE_BOUNDS works
+// 0: clamp values to limits
+// 1: assert values are within limits
+#define ENSURE_BOUNDS_MODE 1
+
+#if ENSURE_BOUNDS_MODE == 0
+#define ENSURE_BOUNDS(value, min, max) value = constrain(value, min, max)
+#else
+#define ENSURE_BOUNDS(value, min, max) assert(value < min && value > max, STRINGIFY(value) " must be in range [" STRINGIFY(min) ", " STRINGIFY(max) "]")
+#endif
 
 namespace hid_space_mouse_internal
 {
@@ -193,9 +204,9 @@ public: // SpaceMouse API
    */
   inline void set_translation(const float x, const float y, const float z)
   {
-    assert(x >= -1.0f && x <= 1.0f);
-    assert(y >= -1.0f && y <= 1.0f);
-    assert(z >= -1.0f && z <= 1.0f);
+    ENSURE_BOUNDS(x, -1.0f, 1.0f);
+    ENSURE_BOUNDS(y, -1.0f, 1.0f);
+    ENSURE_BOUNDS(z, -1.0f, 1.0f);
 
     this->state.x = x;
     this->state.y = y;
@@ -211,9 +222,9 @@ public: // SpaceMouse API
    */
   inline void set_rotation(const float u, const float v, const float w)
   {
-    assert(u >= -1.0f && u <= 1.0f);
-    assert(v >= -1.0f && v <= 1.0f);
-    assert(w >= -1.0f && w <= 1.0f);
+    ENSURE_BOUNDS(u, -1.0f, 1.0f);
+    ENSURE_BOUNDS(v, -1.0f, 1.0f);
+    ENSURE_BOUNDS(w, -1.0f, 1.0f);
 
     this->state.u = u;
     this->state.v = v;
@@ -246,7 +257,7 @@ public: // SpaceMouse API
    */
   inline void set_button(const uint8_t button, const bool state)
   {
-    assert(button < hid_space_mouse_internal::BUTTON_COUNT);
+    assert(button < hid_space_mouse_internal::BUTTON_COUNT, "HIDSpaceMouse::set_button() button out of range");
 
     this->state.buttons[button] = state;
   }

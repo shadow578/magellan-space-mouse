@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-#include <assert.h>
+#include "util.hpp"
 
 namespace magellan_internal
 {
@@ -145,7 +145,7 @@ public:
   uint16_t get_buttons() const { return buttons; }
   bool get_button(const uint8_t button) const
   {
-    assert(button < 12);
+    assert(button < 12, "MagellanParser::get_button() button out of range");
     return buttons & (1 << button);
   }
 
