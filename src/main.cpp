@@ -74,8 +74,6 @@ void loop()
       );
 
       // TODO: handle buttons, need mapping for them tho...
-
-      spaceMouse.submit();
     }
 
     // debug print to console even when not ready

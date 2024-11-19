@@ -41,6 +41,10 @@ constexpr int16_t POSITION_RANGE[2] = { -800, +800 };
  */
 constexpr int16_t ROTATION_RANGE[2] = { -800, +800 };
 
+/**
+ * how often to send a HID report (minimum delay)
+ */
+constexpr uint8_t HID_REPORT_RATE = 8; // 8ms
 
 /**
  * HID Report Descriptor to set up communication with the 3DConnexion software.
@@ -127,7 +131,7 @@ typedef struct
  */
 class HIDSpaceMouse : public PluggableUSBModule 
 {
-public: // PluggableUSBModule
+public: // PluggableUSBModule for HID
   HIDSpaceMouse();
 
 protected:
@@ -144,6 +148,34 @@ protected:
   int send_report(const uint8_t report_id, const uint8_t *data, const size_t len);
   int read_single_byte();
 
+  uint32_t last_hid_report_millis;
+
+  /**
+   * check if the next HID report can be sent
+   * @note if true, will also update the last_hid_report_millis
+   */
+  inline bool can_send_next_report()
+  {
+    const uint32_t now = millis();
+    if (now - last_hid_report_millis >= hid_space_mouse_internal::HID_REPORT_RATE)
+    {
+      last_hid_report_millis = now;
+      return true;
+    }
+
+    return false;
+  }
+
+  enum hid_state_t
+  {
+    IDLE,               // wait for state to be updated, if yes commit and go to SEND_TRANSLATION
+    SEND_TRANSLATION,   // send translation data
+    SEND_ROTATION,      // send rotation data
+    SEND_BUTTONS        // send button data
+  };
+
+  hid_state_t hid_state = IDLE;
+
 public: // SpaceMouse API
   /**
    * update the state of the state mouse.
@@ -151,11 +183,6 @@ public: // SpaceMouse API
    * @note if you change the state of the space mouse, call submit() to send the data to the 3DConnexion software
    */
   void update();
-
-  /**
-   * submit the current state of the space mouse
-   */
-  void submit();
 
   /**
    * set the translation of the space mouse
@@ -170,9 +197,9 @@ public: // SpaceMouse API
     assert(y >= -1.0f && y <= 1.0f);
     assert(z >= -1.0f && z <= 1.0f);
 
-    this->x = x;
-    this->y = y;
-    this->z = z;
+    this->state.x = x;
+    this->state.y = y;
+    this->state.z = z;
   }
 
   /**
@@ -188,9 +215,9 @@ public: // SpaceMouse API
     assert(v >= -1.0f && v <= 1.0f);
     assert(w >= -1.0f && w <= 1.0f);
 
-    this->u = u;
-    this->v = v;
-    this->w = w;
+    this->state.u = u;
+    this->state.v = v;
+    this->state.w = w;
   }
 
   /**
@@ -221,7 +248,7 @@ public: // SpaceMouse API
   {
     assert(button < hid_space_mouse_internal::BUTTON_COUNT);
 
-    buttons[button] = state;
+    this->state.buttons[button] = state;
   }
 
   /**
@@ -233,21 +260,44 @@ public: // SpaceMouse API
   }
 
 private:
-  /**
-   * internal state values, normalized to -1.0 to 1.0
-   */
-  float x = 0.0f,
-        y = 0.0f,
-        z = 0.0f,
-        u = 0.0f, // rx
-        v = 0.0f, // ry
-        w = 0.0f; // rz
+  struct mouse_state_t
+  {
+    float x, 
+          y, 
+          z, 
+          u, // rx 
+          v, // ry
+          w; // rz
+    
+    bool buttons[hid_space_mouse_internal::BUTTON_COUNT];
+  };
 
-  // TODO: optimize memory by making this a bit map
   /**
-   * internal state values for all buttons
+   * active state of the space mouse
    */
-  bool buttons[hid_space_mouse_internal::BUTTON_COUNT];
+  mouse_state_t state;
+
+  /**
+   * state of the space mouse that was last submitted (or is currently being submitted)
+   */
+  mouse_state_t submit_state;
+
+  /**
+   * did the state change since the last submit() call?
+   */
+  inline bool state_dirty() const
+  {
+    return memcmp(&state, &submit_state, sizeof(mouse_state_t)) != 0;
+  }
+
+  /**
+   * commit the active state to the last state
+   * @note copies this->state to this->submit_state
+   */
+  inline void commit_state()
+  {
+    memcpy(&submit_state, &state, sizeof(mouse_state_t));
+  }
 
   /**
    * state of the LED, controlled by software
@@ -278,9 +328,8 @@ private:
 
   /**
    * Send the button data to the 3DConnexion software.
-   * @note accesses the buttons array directly.
    */
-  void submit_buttons();
+  void submit_buttons(const bool buttons[hid_space_mouse_internal::BUTTON_COUNT]);
 };
 
 // ensure VID and PID are changed as needed

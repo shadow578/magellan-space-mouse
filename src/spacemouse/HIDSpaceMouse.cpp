@@ -18,8 +18,17 @@ HIDSpaceMouse::HIDSpaceMouse() : PluggableUSBModule(2, 1, endpointTypes)
 {
   PluggableUSB().plug(this);
 
-  // ensure buttons start in a known state
-  memset(buttons, false, sizeof(buttons));
+  // ensure state is cleared
+  this->state.x = 0.0f;
+  this->state.y = 0.0f;
+  this->state.z = 0.0f;
+  this->state.u = 0.0f;
+  this->state.v = 0.0f;
+  this->state.w = 0.0f;
+  memset(this->state.buttons, false, sizeof(this->state.buttons));
+
+  // ensure last state is cleared
+  commit_state();
 }
 
 int HIDSpaceMouse::getInterface(uint8_t* interfaceNumber)
@@ -130,22 +139,59 @@ void HIDSpaceMouse::update()
 {
   get_led_state();
 
-  // TODO: make this call submit() when needed
-}
+  switch(this->hid_state)
+  {
+    case IDLE:
+    {
+      if (state_dirty())
+      {
+        commit_state();
+        this->hid_state = SEND_TRANSLATION;
+      }
 
-void HIDSpaceMouse::submit()
-{
-  submit_translation(
-    map_normal_float(x, POSITION_RANGE),
-    map_normal_float(y, POSITION_RANGE),
-    map_normal_float(z, POSITION_RANGE)
-  );
-  submit_rotation(
-    map_normal_float(u, ROTATION_RANGE),
-    map_normal_float(v, ROTATION_RANGE),
-    map_normal_float(w, ROTATION_RANGE)
-  );
-  submit_buttons();
+      break;
+    }
+    case SEND_TRANSLATION:
+    {
+      if (can_send_next_report())
+      {
+        submit_translation(
+          map_normal_float(this->submit_state.x, POSITION_RANGE),
+          map_normal_float(this->submit_state.y, POSITION_RANGE),
+          map_normal_float(this->submit_state.z, POSITION_RANGE)
+        );
+        this->hid_state = SEND_ROTATION;
+      }
+      break;
+    }
+    case SEND_ROTATION:
+    {
+      if (can_send_next_report())
+      {
+        submit_rotation(
+          map_normal_float(this->submit_state.u, ROTATION_RANGE),
+          map_normal_float(this->submit_state.v, ROTATION_RANGE),
+          map_normal_float(this->submit_state.w, ROTATION_RANGE)
+        );
+        this->hid_state = SEND_BUTTONS;
+      }
+      break;
+    }
+    case SEND_BUTTONS:
+    {
+      if (can_send_next_report())
+      {
+        submit_buttons(this->submit_state.buttons);
+        this->hid_state = IDLE;
+      }
+      break;
+    }
+    default:
+    {
+      // got into a invalid state, reset to IDLE
+      this->hid_state = IDLE;
+    }
+  }
 }
 
 void HIDSpaceMouse::get_led_state()
@@ -186,7 +232,7 @@ void HIDSpaceMouse::submit_rotation(const int16_t u, const int16_t v, const int1
   send_report(ROTATION_REPORT_ID, rotation, 6);
 }
 
-void HIDSpaceMouse::submit_buttons()
+void HIDSpaceMouse::submit_buttons(const bool buttons[BUTTON_COUNT])
 {
   size_t len = BUTTON_COUNT / 8;
   if (BUTTON_COUNT % 8 != 0)
