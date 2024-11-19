@@ -1,57 +1,11 @@
 #pragma once
 #include <Arduino.h>
+#include <PluggableUSB.h>
 #include <HID.h>
 #include <assert.h>
 
 namespace hid_space_mouse_internal
 {
-  /**
- * HID Report Descriptor to set up communication with the 3DConnexion software.
- */
-static const uint8_t hidReportDescriptor[] PROGMEM = {
-  0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
-  0x09, 0x08,        // Usage (Multi-axis Controller)
-  0xA1, 0x01,        // Collection (Application)
-  0xA1, 0x00,        //   Collection (Physical)
-  0x85, 0x01,        //     Report ID (1)
-  0x16, 0x00, 0x80,  //     Logical Minimum (-32768)
-  0x26, 0xFF, 0x7F,  //     Logical Maximum (32767)
-  0x36, 0x00, 0x80,  //     Physical Minimum (-32768)
-  0x46, 0xFF, 0x7F,  //     Physical Maximum (32767)
-  0x09, 0x30,        //     Usage (X)
-  0x09, 0x31,        //     Usage (Y)
-  0x09, 0x32,        //     Usage (Z)
-  0x75, 0x10,        //     Report Size (16)
-  0x95, 0x03,        //     Report Count (3)
-  0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-  0xC0,              //   End Collection
-  0xA1, 0x00,        //   Collection (Physical)
-  0x85, 0x02,        //     Report ID (2)
-  0x16, 0x00, 0x80,  //     Logical Minimum (-32768)
-  0x26, 0xFF, 0x7F,  //     Logical Maximum (32767)
-  0x36, 0x00, 0x80,  //     Physical Minimum (-32768)
-  0x46, 0xFF, 0x7F,  //     Physical Maximum (32767)
-  0x09, 0x33,        //     Usage (Rx)
-  0x09, 0x34,        //     Usage (Ry)
-  0x09, 0x35,        //     Usage (Rz)
-  0x75, 0x10,        //     Report Size (16)
-  0x95, 0x03,        //     Report Count (3)
-  0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-  0xC0,              //   End Collection
-  0xA1, 0x00,        //   Collection (Physical)
-  0x85, 0x03,        //     Report ID (3)
-  0x15, 0x00,        //     Logical Minimum (0)
-  0x25, 0x01,        //     Logical Maximum (1)
-  0x75, 0x01,        //     Report Size (1)
-  0x95, 0x32,        //     Report Count (50)
-  0x05, 0x09,        //     Usage Page (Button)
-  0x19, 0x01,        //     Usage Minimum (0x01)
-  0x29, 0x32,        //     Usage Maximum (0x32)
-  0x81, 0x02,        //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
-  0xC0,              //   End Collection
-  0xC0               // End Collection
-};
-
 /**
  * report ID for translation data.
  * @note format: [x_lo, x_hi, y_lo, y_hi, z_lo, z_hi]
@@ -69,7 +23,7 @@ constexpr uint8_t ROTATION_REPORT_ID = 2;
  * @note format: bitmap of BUTTON_COUNT bits, each representing a button
  */
 constexpr uint8_t BUTTON_REPORT_ID = 3;
-constexpr uint8_t BUTTON_COUNT = 50;
+constexpr uint8_t BUTTON_COUNT = 32;
 
 /**
  * range for postion (x,y,z) values when sending to the 3DConnexion software
@@ -80,29 +34,111 @@ constexpr int16_t POSITION_RANGE[2] = { -800, +800 };
  * range for rotation (u,v,w) values when sending to the 3DConnexion software
  */
 constexpr int16_t ROTATION_RANGE[2] = { -800, +800 };
+
+
+/**
+ * HID Report Descriptor to set up communication with the 3DConnexion software.
+ */
+static const uint8_t SPACE_MOUSE_REPORT_DESCRIPTOR[] PROGMEM = {
+    0x05, 0x01,          // Usage Page (Generic Desktop)
+    0x09, 0x08,          // Usage (Multi-Axis)
+    0xA1, 0x01,          // Collection (Application)
+                         // Report 1: Translation
+    0xa1, 0x00,          // Collection (Physical)
+    0x85, 0x01,          // Report ID (1)
+    0x16, 0xA2, 0xFE,    // Logical Minimum (-350) (0xFEA2 in little-endian)
+    0x26, 0x5E, 0x01,    // Logical Maximum (350) (0x015E in little-endian)
+    0x36, 0x88, 0xFA,    // Physical Minimum (-1400) (0xFA88 in little-endian)
+    0x46, 0x78, 0x05,    // Physical Maximum (1400) (0x0578 in little-endian)
+    0x09, 0x30,          // Usage (X)
+    0x09, 0x31,          // Usage (Y)
+    0x09, 0x32,          // Usage (Z)
+    0x75, 0x10,          // Report Size (16)
+    0x95, 0x03,          // Report Count (3)
+    0x81, 0x02,          // Input (variable,absolute)
+    0xC0,                // End Collection
+                         // Report 2: Rotation
+    0xa1, 0x00,          // Collection (Physical)
+    0x85, 0x02,          // Report ID (2)
+    0x16, 0xA2, 0xFE,    // Logical Minimum (-350)
+    0x26, 0x5E, 0x01,    // Logical Maximum (350)
+    0x36, 0x88, 0xFA,    // Physical Minimum (-1400)
+    0x46, 0x78, 0x05,    // Physical Maximum (1400)
+    0x09, 0x33,          // Usage (RX)
+    0x09, 0x34,          // Usage (RY)
+    0x09, 0x35,          // Usage (RZ)
+    0x75, 0x10,          // Report Size (16)
+    0x95, 0x03,          // Report Count (3)
+    0x81, 0x02,          // Input (variable,absolute)
+    0xC0,                // End Collection
+                         // Report 3: Keys
+    0xa1, 0x00,          // Collection (Physical)
+    0x85, 0x03,          //  Report ID (3)
+    0x15, 0x00,          //   Logical Minimum (0)
+    0x25, 0x01,          //    Logical Maximum (1)
+    0x75, 0x01,          //    Report Size (1)
+    0x95, BUTTON_COUNT,  //    Report Count (32)
+    0x05, 0x09,          //    Usage Page (Button)
+    0x19, 1,             //    Usage Minimum (Button #1)
+    0x29, BUTTON_COUNT,  //    Usage Maximum (Button #24)
+    0x81, 0x02,          //    Input (variable,absolute)
+    0xC0,                // End Collection
+                         // Report 4: LEDs
+    0xA1, 0x02,          //   Collection (Logical)
+    0x85, 0x04,          //     Report ID (4)
+    0x05, 0x08,          //     Usage Page (LEDs)
+    0x09, 0x4B,          //     Usage (Generic Indicator)
+    0x15, 0x00,          //     Logical Minimum (0)
+    0x25, 0x01,          //     Logical Maximum (1)
+    0x95, 0x01,          //     Report Count (1)
+    0x75, 0x01,          //     Report Size (1)
+    0x91, 0x02,          //     Output (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0x95, 0x01,          //     Report Count (1)
+    0x75, 0x07,          //     Report Size (7)
+    0x91, 0x03,          //     Output (Const,Var,Abs,No Wrap,Linear,Preferred State,No Null Position,Non-volatile)
+    0xC0,                //   End Collection
+    0xc0                 // END_COLLECTION
+};
+
+typedef struct
+{
+    InterfaceDescriptor hid;
+    HIDDescDescriptor desc;
+    EndpointDescriptor in;
+    EndpointDescriptor out;
+} SpaceMouseHIDDescriptor;
 }; // namespace hid_space_mouse_internal
 
 /**
  * emulate a 3DConnexion SpaceMouse using an Arduino Pro Micro
  * 
  * @note
+ * based on https://github.com/AndunHH/spacemouse after TeachingTech's code did not work...
+ * 
+ * @note
  * the USB VID and PID must be changed to match the 3DConnexion SpaceMouse, so
  * VID = 0x256f and PID = 0xc631 (SpaceMouse Pro Wireless (cabled))
  */
-class HIDSpaceMouse
+class HIDSpaceMouse : public PluggableUSBModule 
 {
-public:
-  HIDSpaceMouse()
-  {
-    memset(buttons, false, sizeof(buttons));
-  }
+public: // PluggableUSBModule
+  HIDSpaceMouse();
 
-  /**
-   * Setup the space mouse.
-   * @note call this early in setup()
-   */
-  void begin();
+protected:
+  uint8_t endpointTypes[2] = { EP_TYPE_INTERRUPT_IN, EP_TYPE_INTERRUPT_OUT };
 
+  inline uint8_t endpoint_tx() const { return pluggedEndpoint; }
+  inline uint8_t endpoint_rx() const { return pluggedEndpoint + 1; }
+
+  int getInterface(uint8_t* interfaceNumber);
+  int getDescriptor(USBSetup& setup);
+  bool setup(USBSetup& setup);
+
+  int write(const uint8_t *buffer, const size_t len);
+  int send_report(const uint8_t report_id, const uint8_t *data, const size_t len);
+  int read_single_byte();
+
+public: // SpaceMouse API
   /**
    * submit the current state of the space mouse
    */

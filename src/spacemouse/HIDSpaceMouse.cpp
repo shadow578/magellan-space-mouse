@@ -14,11 +14,131 @@ inline int16_t map_normal_float(const float value, const int16_t range[2])
   return range[0] + (value + 1.0f) * span / 2;
 }
 
-void HIDSpaceMouse::begin()
+HIDSpaceMouse::HIDSpaceMouse() : PluggableUSBModule(2, 1, endpointTypes)
 {
-  // setup HID
-  static HIDSubDescriptor node(hidReportDescriptor, sizeof(hidReportDescriptor));
-  HID().AppendDescriptor(&node);
+  PluggableUSB().plug(this);
+
+  // ensure buttons start in a known state
+  memset(buttons, false, sizeof(buttons));
+}
+
+int HIDSpaceMouse::getInterface(uint8_t* interfaceNumber)
+{
+  #define SPACEMOUSE_D_HIDREPORT(length)                                     \
+    {                                                                      \
+        9, 0x21, 0x11, 0x01, 0, 1, 0x22, lowByte(length), highByte(length) \
+    }
+
+  interfaceNumber[0] += 1;
+  const SpaceMouseHIDDescriptor descriptor = {
+    D_INTERFACE(pluggedInterface, 2, USB_DEVICE_CLASS_HUMAN_INTERFACE, HID_SUBCLASS_NONE, HID_PROTOCOL_NONE),
+    SPACEMOUSE_D_HIDREPORT(sizeof(SPACE_MOUSE_REPORT_DESCRIPTOR)),
+    D_ENDPOINT(USB_ENDPOINT_IN(endpoint_tx()), USB_ENDPOINT_TYPE_INTERRUPT, USB_EP_SIZE, 0),
+    D_ENDPOINT(USB_ENDPOINT_OUT(endpoint_rx()), USB_ENDPOINT_TYPE_INTERRUPT, USB_EP_SIZE, 0),
+  };
+
+  return USB_SendControl(0, &descriptor, sizeof(descriptor));
+}
+
+int HIDSpaceMouse::getDescriptor(USBSetup& setup)
+{
+  if (setup.bmRequestType != REQUEST_DEVICETOHOST_STANDARD_INTERFACE)
+  {
+    return 0;
+  }
+
+  if (setup.wValueH != HID_REPORT_DESCRIPTOR_TYPE)
+  {
+    return 0;
+  }
+
+  if (setup.wIndex != pluggedInterface)
+  {
+    return 0;
+  }
+
+  // FIXME: protocol = HID_REPORT_PROTOCOL;
+
+  return USB_SendControl(TRANSFER_PGM, SPACE_MOUSE_REPORT_DESCRIPTOR, sizeof(SPACE_MOUSE_REPORT_DESCRIPTOR));
+}
+
+bool HIDSpaceMouse::setup(USBSetup& setup)
+{
+  if (pluggedInterface != setup.wIndex)
+  {
+    return false;
+  }
+
+  if (setup.bmRequestType == REQUEST_DEVICETOHOST_CLASS_INTERFACE)
+  {
+    if (setup.bRequest == HID_GET_REPORT)
+    {
+      return true;
+    }
+    if (setup.bRequest == HID_GET_PROTOCOL)
+    {
+      return true;
+    }
+  }
+
+  if (setup.bmRequestType == REQUEST_HOSTTODEVICE_CLASS_INTERFACE)
+  {
+    if (setup.bRequest == HID_SET_PROTOCOL)
+    {
+      //FIXME: protocol = setup.wValueL;
+      return true;
+    }
+    if (setup.bRequest == HID_SET_IDLE)
+    {
+      // FIXME: idle = setup.wValueL;
+      return true;
+    }
+    if (setup.bRequest == HID_SET_REPORT)
+    {
+			// If you press "Calibrate" in the windows driver of a _SpaceNavigator_ the following setup request is sent:
+			// wValue: 0x0307
+			// wIndex: 0 (0x0000)
+			// wLength: 2
+			// Data Fragment: 0700
+			// Unfortunately, we are simulating a _SpaceMouse Pro Wireless (cabled)_, because it has more than two buttons
+			// With this SM pro, the windows driver is NOT sending this status report and their is no point in waiting for it...
+			return true;
+    }
+  }
+
+  return false;
+}
+
+int HIDSpaceMouse::write(const uint8_t *data, const size_t len)
+{
+  return USB_Send(endpoint_tx(), data, len);
+}
+
+int HIDSpaceMouse::send_report(const uint8_t id, const uint8_t *data, const size_t len)
+{
+  auto ret1 = USB_Send(endpoint_tx(), &id, 1);
+  if (ret1 < 0)
+  {
+    return ret1;
+  }
+
+  auto ret2 = USB_Send(endpoint_tx() | TRANSFER_RELEASE, data, len);
+  if (ret2 < 0)
+  {
+    return ret2;
+  }
+
+  return ret1 + ret2;
+}
+
+int HIDSpaceMouse::read_single_byte()
+{
+  if (USB_Available(endpoint_rx()))
+  {
+    return USB_Recv(endpoint_rx());
+  }
+  
+  return -1;
 }
 
 void HIDSpaceMouse::submit()
@@ -33,6 +153,7 @@ void HIDSpaceMouse::submit()
     map_normal_float(v, ROTATION_RANGE),
     map_normal_float(w, ROTATION_RANGE)
   );
+  submit_buttons();
 }
 
 void HIDSpaceMouse::submit_translation(const int16_t x, const int16_t y, const int16_t z)
@@ -43,7 +164,7 @@ void HIDSpaceMouse::submit_translation(const int16_t x, const int16_t y, const i
     static_cast<uint8_t>(z & 0xFF), static_cast<uint8_t>(z >> 8)
   };
 
-  HID().SendReport(TRANSLATION_REPORT_ID, translation, 6);
+  send_report(TRANSLATION_REPORT_ID, translation, 6);
 }
 
 void HIDSpaceMouse::submit_rotation(const int16_t u, const int16_t v, const int16_t w)
@@ -54,7 +175,7 @@ void HIDSpaceMouse::submit_rotation(const int16_t u, const int16_t v, const int1
     static_cast<uint8_t>(w & 0xFF), static_cast<uint8_t>(w >> 8)
   };
 
-  HID().SendReport(ROTATION_REPORT_ID, rotation, 6);
+  send_report(ROTATION_REPORT_ID, rotation, 6);
 }
 
 void HIDSpaceMouse::submit_buttons()
@@ -78,5 +199,5 @@ void HIDSpaceMouse::submit_buttons()
     }
   }
 
-  HID().SendReport(BUTTON_REPORT_ID, data, len);
+  send_report(BUTTON_REPORT_ID, data, len);
 }
