@@ -210,7 +210,8 @@ private:
     KEYPRESS = 'k',          // keypress message
     POSITION_ROTATION = 'd', // position and rotation message
     MODE_CHANGE = 'm',       // mode change message
-    ZERO = 'z'               // zeroed message
+    ZERO = 'z',              // zeroed message
+    SENSITIVITY_CHANGE = 'q' // sensitivity change message
   };
 
   /**
@@ -278,6 +279,7 @@ private:
   // functions to process specific message types
   bool process_version(const char* payload, const uint8_t len);
   bool process_mode_change(const char* payload, const uint8_t len);
+  bool process_sensitivity_change(const char* payload, const uint8_t len);
   bool process_zero(const char* payload, const uint8_t len);
   bool process_keypress(const char* payload, const uint8_t len);
   bool process_position_rotation(const char* payload, const uint8_t len);

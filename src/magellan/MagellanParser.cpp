@@ -223,6 +223,12 @@ bool MagellanParser::update_rx(const char c)
           this->message_type = ZERO;
           break;
         }
+        case 'q':
+        {
+          // sensitivity change message
+          this->message_type = SENSITIVITY_CHANGE;
+          break;
+        }
         default:
         {
           // unknown message
@@ -354,6 +360,10 @@ bool MagellanParser::process_message(const message_type_t type, const char* payl
     {
       return process_zero(payload, len);
     }
+    case SENSITIVITY_CHANGE:
+    {
+      return process_sensitivity_change(payload, len);
+    }
     default:
     {
       // unknown message type
@@ -408,6 +418,28 @@ bool MagellanParser::process_mode_change(const char* payload, const uint8_t len)
   {
     this->log->print(F("[Magellan] got mode: "));
     this->log->println(this->mode);
+  }
+
+  return true;
+}
+
+bool MagellanParser::process_sensitivity_change(const char* payload, const uint8_t len)
+{
+  // expect 2 characters in the payload
+  if (len != 2)
+  {
+    return false;
+  }
+
+  const uint8_t s0 = decode_nibble(payload[0]);
+  const uint8_t s1 = decode_nibble(payload[1]);
+
+  if (this->log != nullptr)
+  {
+    this->log->print(F("[Magellan] got sensitivity: "));
+    this->log->print(s0);
+    this->log->print(F(", "));
+    this->log->println(s1);
   }
 
   return true;
