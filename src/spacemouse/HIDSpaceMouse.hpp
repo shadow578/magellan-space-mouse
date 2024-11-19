@@ -26,6 +26,12 @@ constexpr uint8_t BUTTON_REPORT_ID = 3;
 constexpr uint8_t BUTTON_COUNT = 32;
 
 /**
+ * report ID for LED data.
+ * @note format: [state, 0=off, 1=on]
+ */
+constexpr uint8_t LED_REPORT_ID = 4;
+
+/**
  * range for postion (x,y,z) values when sending to the 3DConnexion software
  */
 constexpr int16_t POSITION_RANGE[2] = { -800, +800 };
@@ -140,6 +146,13 @@ protected:
 
 public: // SpaceMouse API
   /**
+   * update the state of the state mouse.
+   * @note this should be called regularly to keep the state up to date
+   * @note if you change the state of the space mouse, call submit() to send the data to the 3DConnexion software
+   */
+  void update();
+
+  /**
    * submit the current state of the space mouse
    */
   void submit();
@@ -211,6 +224,14 @@ public: // SpaceMouse API
     buttons[button] = state;
   }
 
+  /**
+   * get the state of the LED, controlled by software
+   */
+  inline bool get_led() const
+  {
+    return ledState;
+  }
+
 private:
   /**
    * internal state values, normalized to -1.0 to 1.0
@@ -228,7 +249,17 @@ private:
    */
   bool buttons[hid_space_mouse_internal::BUTTON_COUNT];
 
+  /**
+   * state of the LED, controlled by software
+   */
+  bool ledState = false;
+
 private:
+  /**
+   * get the state of the LED from the 3DConnexion software, if available.
+   */
+  void get_led_state();
+
   /**
    * Send translation data to 3DConnexion software.
    * @param x x translation

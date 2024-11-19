@@ -24,6 +24,7 @@ HIDSpaceMouse spaceMouse;
 MagellanParser magellan(&Serial); // debug output to USB serial port
 
 bool was_ready = false;
+bool old_led = false;
 
 void setup()
 {
@@ -93,5 +94,14 @@ void loop()
     Serial.print(", buttons=");
     Serial.print(magellan.get_buttons(), BIN);
     Serial.println();
+  }
+
+  spaceMouse.update();
+
+  if (spaceMouse.get_led() != old_led)
+  {
+    Serial.print("[Main] LED state changed: ");
+    Serial.println(spaceMouse.get_led() ? "on" : "off");
+    old_led = spaceMouse.get_led();
   }
 }

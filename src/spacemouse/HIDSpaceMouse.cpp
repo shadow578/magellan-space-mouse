@@ -109,11 +109,6 @@ bool HIDSpaceMouse::setup(USBSetup& setup)
   return false;
 }
 
-int HIDSpaceMouse::write(const uint8_t *data, const size_t len)
-{
-  return USB_Send(endpoint_tx(), data, len);
-}
-
 int HIDSpaceMouse::send_report(const uint8_t id, const uint8_t *data, const size_t len)
 {
   auto ret1 = USB_Send(endpoint_tx(), &id, 1);
@@ -131,14 +126,11 @@ int HIDSpaceMouse::send_report(const uint8_t id, const uint8_t *data, const size
   return ret1 + ret2;
 }
 
-int HIDSpaceMouse::read_single_byte()
+void HIDSpaceMouse::update()
 {
-  if (USB_Available(endpoint_rx()))
-  {
-    return USB_Recv(endpoint_rx());
-  }
-  
-  return -1;
+  get_led_state();
+
+  // TODO: make this call submit() when needed
 }
 
 void HIDSpaceMouse::submit()
@@ -154,6 +146,22 @@ void HIDSpaceMouse::submit()
     map_normal_float(w, ROTATION_RANGE)
   );
   submit_buttons();
+}
+
+void HIDSpaceMouse::get_led_state()
+{
+  if (USB_Available(endpoint_rx()) >= 2)
+  {
+    uint8_t data[2];
+    USB_Recv(endpoint_rx(), data, 2);
+    
+    // is LED report?
+    if (data[0] == LED_REPORT_ID)
+    {
+      ledState = data[1] == 1;
+    }
+  }
+  
 }
 
 void HIDSpaceMouse::submit_translation(const int16_t x, const int16_t y, const int16_t z)
