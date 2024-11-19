@@ -23,6 +23,8 @@ constexpr float w_correction = 1.0f; // rotation around z axis
 HIDSpaceMouse spaceMouse;
 MagellanParser magellan(&Serial); // debug output to USB serial port
 
+bool was_ready = false;
+
 void setup()
 {
   spaceMouse.begin();
@@ -44,7 +46,21 @@ void loop()
 {
   if (magellan.update())
   {
-    if (magellan.ready())
+    const bool is_ready = magellan.ready();
+    if (is_ready && !was_ready)
+    {
+      // just became ready
+      Serial.println("[Main] magellan is now ready");
+      magellan.beep();
+    }
+    else if (!is_ready && was_ready)
+    {
+      // no longer ready ?!
+      Serial.println("[Main] magellan is no longer ready");
+    }
+    was_ready = is_ready;
+
+    if (is_ready)
     {
       spaceMouse.set_translation(
         magellan.get_x() * x_correction, 

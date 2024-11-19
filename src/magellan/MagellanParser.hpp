@@ -35,6 +35,11 @@ namespace magellan_internal
   static const char COMMAND_ZERO[] = "z\r";
 
   /**
+   * beep command
+   */
+  static const char COMMAND_BEEP[] = "b\r";
+
+  /**
    * magic string that must be included in the version response
    */
   static const char VERSION_MAGIC[] = "MAGELLAN";
@@ -114,6 +119,16 @@ public:
    * values are only valid when ready() returns true.
    */
   bool update();
+
+  /**
+   * make the space mouse beep
+   */
+  void beep()
+  {
+    send_command(magellan_internal::COMMAND_BEEP);
+    delay(100);
+    send_command(magellan_internal::COMMAND_BEEP);
+  }
 
   bool ready() const 
   {
