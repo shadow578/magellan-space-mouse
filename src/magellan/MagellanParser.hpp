@@ -12,7 +12,7 @@ namespace magellan_internal
   /**
    * number of buttons supported by the space mouse
    */
-  constexpr uint8_t BUTTON_COUNT = 12;
+  constexpr uint8_t BUTTON_COUNT = 9;
 
   /**
    * message separator, added to the end of each message

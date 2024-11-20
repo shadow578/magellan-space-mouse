@@ -3,8 +3,8 @@
 #include "magellan/MagellanParser.hpp"
 
 #if !defined(GIT_VERSION_STRING)
-  #define GIT_VERSION_STRING "unknown"
-  #warning "GIT_VERSION_STRING not defined! check your build environment."
+#define GIT_VERSION_STRING "unknown"
+#warning "GIT_VERSION_STRING not defined! check your build environment."
 #endif
 
 #define WAIT_FOR_SERIAL 1
@@ -13,12 +13,25 @@
 // before being sent to the HIDSpaceMouse.
 // 1.0f means no correction, -1.0f means invert the value.
 // these values be in the range [-1.0f, 1.0f]
-constexpr float x_correction = 1.0f; // x position 
-constexpr float y_correction = 1.0f; // y position 
-constexpr float z_correction = 1.0f; // z position 
+constexpr float x_correction = 1.0f; // x position
+constexpr float y_correction = 1.0f; // y position
+constexpr float z_correction = 1.0f; // z position
 constexpr float u_correction = 1.0f; // rotation around x axis
 constexpr float v_correction = 1.0f; // rotation around y axis
 constexpr float w_correction = 1.0f; // rotation around z axis
+
+// mapping of Magellan buttons to HIDSpaceMouse buttons
+static const HIDSpaceMouse::KnownButton button_mappings[magellan_internal::BUTTON_COUNT] = {
+    HIDSpaceMouse::ONE, // Key "1"
+    HIDSpaceMouse::TWO, // Key "2"
+    HIDSpaceMouse::THREE, // Key "3"
+    HIDSpaceMouse::FOUR, // Key "4"
+    HIDSpaceMouse::FIT, // Key "5"
+    HIDSpaceMouse::TOP, // Key "6"
+    HIDSpaceMouse::RIGHT, // Key "7"
+    HIDSpaceMouse::FRONT, // Key "8"
+    HIDSpaceMouse::MENU  // Key "*"
+};
 
 HIDSpaceMouse spaceMouse(&Serial); // debug output to USB serial port
 MagellanParser magellan(&Serial);  // debug output to USB serial port
@@ -33,10 +46,11 @@ void setup()
   // note: Serial is the USB serial port, Serial1 is the hardware serial port
   Serial.begin(115200);
 
-  #if WAIT_FOR_SERIAL
-    // wait for host to open serial port
-    while(!Serial) ;
-  #endif
+#if WAIT_FOR_SERIAL
+  // wait for host to open serial port
+  while (!Serial)
+    ;
+#endif
 
   Serial.println("[Main] setup()");
   Serial.println("[Main] version: " GIT_VERSION_STRING);
@@ -62,18 +76,21 @@ void loop()
 
     if (is_ready)
     {
+      // update rotation and translation values
       spaceMouse.set_translation(
-        magellan.get_x() * x_correction, 
-        magellan.get_y() * y_correction, 
-        magellan.get_z() * z_correction
-      );
+          magellan.get_x() * x_correction,
+          magellan.get_y() * y_correction,
+          magellan.get_z() * z_correction);
       spaceMouse.set_rotation(
-        magellan.get_u() * u_correction, 
-        magellan.get_v() * v_correction, 
-        magellan.get_w() * w_correction
-      );
+          magellan.get_u() * u_correction,
+          magellan.get_v() * v_correction,
+          magellan.get_w() * w_correction);
 
-      // TODO: handle buttons, need mapping for them tho...
+      // update button states according to mapping
+      for (uint8_t i = 0; i < magellan_internal::BUTTON_COUNT; i++)
+      {
+        spaceMouse.set_button(button_mappings[i], magellan.get_button(i));
+      }
     }
 
     // debug print to console even when not ready
