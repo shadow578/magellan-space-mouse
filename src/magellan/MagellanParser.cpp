@@ -431,15 +431,15 @@ bool MagellanParser::process_sensitivity_change(const char* payload, const uint8
     return false;
   }
 
-  const uint8_t s0 = decode_nibble(payload[0]);
-  const uint8_t s1 = decode_nibble(payload[1]);
+  this->translation_sensitivity = decode_nibble(payload[0]);
+  this->rotation_sensitivity = decode_nibble(payload[1]);
 
   if (this->log != nullptr)
   {
-    this->log->print(F("[Magellan] got sensitivity: "));
-    this->log->print(s0);
-    this->log->print(F(", "));
-    this->log->println(s1);
+    this->log->print(F("[Magellan] got sensitivity: T="));
+    this->log->print(this->translation_sensitivity);
+    this->log->print(F(", R="));
+    this->log->println(this->rotation_sensitivity);
   }
 
   return true;
@@ -487,8 +487,6 @@ bool MagellanParser::process_keypress(const char* payload, const uint8_t len)
 
 bool MagellanParser::process_position_rotation(const char* payload, const uint8_t len)
 {
-  // TODO: handle modes other than mode 3?
-
   // expect 24 characters in the payload 
   // (mode 3 = position and rotation)
   if (len != 24)
@@ -497,28 +495,12 @@ bool MagellanParser::process_position_rotation(const char* payload, const uint8_
   }
 
   // get raw values
-  const int16_t x = decode_signed_word(payload + 0);
-  const int16_t y = decode_signed_word(payload + 8);
-  const int16_t z = decode_signed_word(payload + 4);
-  const int16_t u = decode_signed_word(payload + 20); // theta X = rX
-  const int16_t v = decode_signed_word(payload + 12); // theta Y = rY
-  const int16_t w = decode_signed_word(payload + 16); // theta Z = rZ
-
-  // normalize values to be in the range [-1.0, 1.0]
-  // the mouse seems to send values in a range of about [-2400, +2000] in 
-  // highest sensitivity mode, so let's assume a effective range 
-  // of [-2500 to +2500] and clamp the rest.
-  // this may cause some weirdness, but it's way better than not working at all... 
-  #define SCALE(n) (constrain((n / 2500.0f), -1.0, 1.0))
-
-  // TODO: allow calibration of ranges depending on the sensitivity setting
-
-  this->x = SCALE(x);
-  this->y = SCALE(y);
-  this->z = SCALE(z);
-  this->u = SCALE(u);
-  this->v = SCALE(v);
-  this->w = SCALE(w);
+  this->x = decode_signed_word(payload + 0);
+  this->y = decode_signed_word(payload + 8);
+  this->z = decode_signed_word(payload + 4);
+  this->u = decode_signed_word(payload + 20); // theta X = rX
+  this->v = decode_signed_word(payload + 12); // theta Y = rY
+  this->w = decode_signed_word(payload + 16); // theta Z = rZ
 
   if (this->log != nullptr)
   {
@@ -530,12 +512,12 @@ bool MagellanParser::process_position_rotation(const char* payload, const uint8_
       this->log->print(F(")"))
 
     this->log->print(F("[Magellan] got position/rotation:"));
-    PRINT_VALUE("x", this->x, x);
-    PRINT_VALUE(", y", this->y, y);
-    PRINT_VALUE(", z", this->z, z);
-    PRINT_VALUE(", u", this->u, u);
-    PRINT_VALUE(", v", this->v, v);
-    PRINT_VALUE(", w", this->w, w);
+    PRINT_VALUE("x", this->get_x(), this->x);
+    PRINT_VALUE(", y", this->get_y(), this->y);
+    PRINT_VALUE(", z", this->get_z(), this->z);
+    PRINT_VALUE(", u", this->get_u(), this->u);
+    PRINT_VALUE(", v", this->get_v(), this->v);
+    PRINT_VALUE(", w", this->get_w(), this->w);
     this->log->println();
   }
 

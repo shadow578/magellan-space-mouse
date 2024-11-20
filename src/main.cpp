@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "spacemouse/HIDSpaceMouse.hpp"
 #include "magellan/MagellanParser.hpp"
+#include "magellan/CalibrationUtil.hpp"
 
 #if !defined(GIT_VERSION_STRING)
 #define GIT_VERSION_STRING "unknown"
@@ -8,6 +9,7 @@
 #endif
 
 #define WAIT_FOR_SERIAL 1
+#define CALIBRATION 0
 
 // correction factors applied to the values received from the Magellan
 // before being sent to the HIDSpaceMouse.
@@ -22,19 +24,23 @@ constexpr float w_correction = 1.0f; // rotation around z axis
 
 // mapping of Magellan buttons to HIDSpaceMouse buttons
 static const HIDSpaceMouse::KnownButton button_mappings[magellan_internal::BUTTON_COUNT] = {
-    HIDSpaceMouse::ONE, // Key "1"
-    HIDSpaceMouse::TWO, // Key "2"
+    HIDSpaceMouse::ONE,   // Key "1"
+    HIDSpaceMouse::TWO,   // Key "2"
     HIDSpaceMouse::THREE, // Key "3"
-    HIDSpaceMouse::FOUR, // Key "4"
-    HIDSpaceMouse::FIT, // Key "5"
-    HIDSpaceMouse::TOP, // Key "6"
+    HIDSpaceMouse::FOUR,  // Key "4"
+    HIDSpaceMouse::FIT,   // Key "5"
+    HIDSpaceMouse::TOP,   // Key "6"
     HIDSpaceMouse::RIGHT, // Key "7"
     HIDSpaceMouse::FRONT, // Key "8"
-    HIDSpaceMouse::MENU  // Key "*"
+    HIDSpaceMouse::MENU   // Key "*"
 };
 
 HIDSpaceMouse spaceMouse(&Serial); // debug output to USB serial port
 MagellanParser magellan(&Serial);  // debug output to USB serial port
+
+#if CALIBRATION == 1
+MagellanCalibrationUtil calibration(&Serial, &magellan);
+#endif
 
 bool was_ready = false;
 bool old_led = false;
@@ -58,7 +64,14 @@ void setup()
 
 void loop()
 {
-  if (magellan.update())
+  const bool did_update = magellan.update();
+
+#if CALIBRATION == 1
+  calibration.update();
+  return; // don't use any of the data when in calibration mode
+#endif
+
+  if (did_update)
   {
     const bool is_ready = magellan.ready();
     if (is_ready && !was_ready)

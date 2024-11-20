@@ -145,12 +145,27 @@ public:
     return init_state == DONE;
   }
 
-  float get_x() const { return x; }
-  float get_y() const { return y; }
-  float get_z() const { return z; }
-  float get_u() const { return u; }
-  float get_v() const { return v; }
-  float get_w() const { return w; }
+  // normalize values to be in the range [-1.0, 1.0]
+  // the mouse seems to send values in a range of about [-2400, +2000] in 
+  // highest sensitivity mode, so let's assume a effective range 
+  // of [-2500 to +2500] and clamp the rest.
+  // this may cause some weirdness, but it's way better than not working at all... 
+  // TODO allow calibration of ranges with both maximum and minimum for all axes
+  #define SCALE(n) (constrain((n / 2500.0f), -1.0, 1.0))
+
+  float get_x() const { return SCALE(x); }
+  float get_y() const { return SCALE(y); }
+  float get_z() const { return SCALE(z); }
+  float get_u() const { return SCALE(u); }
+  float get_v() const { return SCALE(v); }
+  float get_w() const { return SCALE(w); }
+
+  int16_t get_x_raw() const { return x; }
+  int16_t get_y_raw() const { return y; }
+  int16_t get_z_raw() const { return z; }
+  int16_t get_u_raw() const { return u; }
+  int16_t get_v_raw() const { return v; }
+  int16_t get_w_raw() const { return w; }
 
   uint16_t get_buttons() const { return buttons; }
 
@@ -166,6 +181,9 @@ public:
     assert(button < magellan_internal::BUTTON_COUNT, "MagellanParser::get_button() button out of range");
     return buttons & (1 << button);
   }
+
+  uint8_t get_translation_sensitivity() const { return translation_sensitivity; }
+  uint8_t get_rotation_sensitivity() const { return rotation_sensitivity; }
 
 private:
   /**
@@ -207,6 +225,16 @@ private:
    * @note expected to be 3 normally.
    */
   uint8_t mode = 0;
+
+  /**
+   * translation sensitivity level. 0-7
+   */
+  uint8_t translation_sensitivity = 0;
+
+  /**
+   * rotation sensitivity level. 0-7
+   */
+  uint8_t rotation_sensitivity = 0;
 
   /**
    * update init sequence
@@ -260,14 +288,14 @@ private:
   bool update_rx(const char c);
 
   /**
-   * internal state values, normalized to -1.0 to 1.0
+   * internal translation and rotation values, raw from the space mouse.
    */
-  float x = 0.0f,
-        y = 0.0f,
-        z = 0.0f,
-        u = 0.0f, // rx
-        v = 0.0f, // ry
-        w = 0.0f; // rz
+  int16_t x = 0,
+          y = 0,
+          z = 0,
+          u = 0, // rx
+          v = 0, // ry
+          w = 0; // rz
 
   /**
    * internal state values for all buttons.
