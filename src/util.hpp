@@ -8,7 +8,7 @@
  * assert that a condition is true, otherwise print and abort()
  */
 #define assert(x, msg)                                \
-  if (x)                                              \
+  if (!(x))                                           \
   {                                                   \
     if (Serial)                                       \
     {                                                 \

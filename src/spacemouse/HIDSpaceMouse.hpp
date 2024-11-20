@@ -12,7 +12,7 @@
 #if ENSURE_BOUNDS_MODE == 0
 #define ENSURE_BOUNDS(value, min, max) value = constrain(value, min, max)
 #else
-#define ENSURE_BOUNDS(value, min, max) assert(value<min && value> max, STRINGIFY(value) " must be in range [" STRINGIFY(min) ", " STRINGIFY(max) "]")
+#define ENSURE_BOUNDS(value, min, max) assert(value >= min && value <= max, STRINGIFY(value) " must be in range [" STRINGIFY(min) ", " STRINGIFY(max) "]")
 #endif
 
 namespace hid_space_mouse_internal
