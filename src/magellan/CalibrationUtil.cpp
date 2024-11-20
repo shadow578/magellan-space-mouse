@@ -50,7 +50,7 @@ void MagellanCalibrationUtil::update()
   }
   case PROMPT_MOVE:
   {
-    this->out->println(F("Please move the space mouse to the extremes of its range.\nPress the \"*\" key when done."));
+    this->out->println(F("Please move the space mouse to the extremes of its range."));
     this->state = WAIT_MOVE;
     break;
   }
@@ -63,21 +63,6 @@ void MagellanCalibrationUtil::update()
       this->state = PROMPT_SENSITIVITY_SET;
       reset_should_print();
       break;
-    }
-
-    // end key pressed?
-    if (this->magellan->get_button(8))
-    {
-      this->out->println(F("\"*\" key pressed, stopping calibration."));
-      this->state = FINISHED;
-      reset_should_print();
-      break;
-    }
-
-    // any key pressed?
-    if (this->magellan->get_buttons())
-    {
-      this->out->println(F("To end calibration, press the \"*\" key."));
     }
 
     // print every 1 second
@@ -107,18 +92,6 @@ void MagellanCalibrationUtil::update()
     UPDATE_MINMAX(u);
     UPDATE_MINMAX(v);
     UPDATE_MINMAX(w);
-    break;
-  }
-  case FINISHED:
-  {
-    this->out->println(F("Calibration complete."));
-    this->print_min_max();
-
-    // restart calibration after the "*" key is released
-    if (!this->magellan->get_button(8))
-    {
-      this->state = WAIT_FOR_READY;
-    }
     break;
   }
   default:

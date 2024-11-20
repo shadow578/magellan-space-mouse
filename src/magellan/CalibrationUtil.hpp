@@ -66,8 +66,6 @@ private:
     PROMPT_MOVE,            // prompt user to move the space mouse to extremes
     WAIT_MOVE,              // wait for user to move the space mouse to extremes.
                             // while in this state, output the extremes regularly.
-                            // move on when pressing the "*" button.
-    FINISHED                // calibration is complete, output calibration values
   };
 
   state_t state = WAIT_FOR_READY;
