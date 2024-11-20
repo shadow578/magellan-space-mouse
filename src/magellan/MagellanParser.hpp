@@ -5,6 +5,16 @@
 namespace magellan_internal
 {
   /**
+   * size of the message RX buffer
+   */
+  constexpr size_t MESSAGE_BUFFER_SIZE = 128;
+
+  /**
+   * number of buttons supported by the space mouse
+   */
+  constexpr uint8_t BUTTON_COUNT = 12;
+
+  /**
    * message separator, added to the end of each message
    */
   constexpr char MESSAGE_END = '\r';
@@ -143,9 +153,17 @@ public:
   float get_w() const { return w; }
 
   uint16_t get_buttons() const { return buttons; }
+
+  /**
+   * get the state of a button
+   * @param button the button to check
+   * @note
+   * button numbers correspond to the printed numbers on the space mouse, subtracted by 1.
+   * only exception is the "*" button, which is button #8.
+   */
   bool get_button(const uint8_t button) const
   {
-    assert(button < 12, "MagellanParser::get_button() button out of range");
+    assert(button < magellan_internal::BUTTON_COUNT, "MagellanParser::get_button() button out of range");
     return buttons & (1 << button);
   }
 
@@ -227,7 +245,7 @@ private:
   /**
    * buffer for incoming data
    */
-  char rx_buffer[256];
+  char rx_buffer[magellan_internal::MESSAGE_BUFFER_SIZE];
 
   /**
    * length of the string in rx_buffer
@@ -253,10 +271,11 @@ private:
 
   /**
    * internal state values for all buttons.
-   * @note up to 12 buttons are supported.
+   * @note up to 12 buttons are theoretically supported, only 9 are known to be used.
    * @note each button is represented by a single bit. top 4 bits are unused.
    */
   uint16_t buttons = 0;
+  static_assert((sizeof(buttons) * 8) >= magellan_internal::BUTTON_COUNT, "MagellanParser::buttons is too small for given BUTTON_COUNT!");
 
 private:
   /**
