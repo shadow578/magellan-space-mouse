@@ -104,18 +104,18 @@ void MagellanCalibrationUtil::update()
 void MagellanCalibrationUtil::print_min_max()
 {
   #define PRINT_MINMAX(axis)                    \
-    this->out->print(F(STRINGIFY2(axis) "=[")); \
+    this->out->print(F("." STRINGIFY2(axis) "={")); \
     this->out->print(this->axis##_min);         \
     this->out->print(F(", "));                  \
     this->out->print(this->axis##_max);         \
-    this->out->print(F("], "));                 \
+    this->out->print(F("}, "));                 \
   
-  this->out->print(F("Minimum/Maximum Values: "));
+  this->out->print(F("Axis calibration: {"));
   PRINT_MINMAX(x);
   PRINT_MINMAX(y);
   PRINT_MINMAX(z);
   PRINT_MINMAX(u);
   PRINT_MINMAX(v);
   PRINT_MINMAX(w);
-  this->out->println();
+  this->out->println(F("}"));
 }

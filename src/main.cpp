@@ -11,6 +11,16 @@
 #define WAIT_FOR_SERIAL 1
 #define CALIBRATION 0
 
+// magellan axis calibration values, as reported by CalibrationUtil
+static const magellan_internal::axis_calibration_t cal = {
+  .x={-4092, 4029}, 
+  .y={-3995, 3658}, 
+  .z={-3706, 4017}, 
+  .u={-4077, 3881}, 
+  .v={-4063, 3812}, 
+  .w={-3828, 4089}
+};
+
 // correction factors applied to the values received from the Magellan
 // before being sent to the HIDSpaceMouse.
 // 1.0f means no correction, -1.0f means invert the value.
@@ -36,7 +46,7 @@ static const HIDSpaceMouse::KnownButton button_mappings[magellan_internal::BUTTO
 };
 
 HIDSpaceMouse spaceMouse(&Serial); // debug output to USB serial port
-MagellanParser magellan(&Serial);  // debug output to USB serial port
+MagellanParser magellan(&cal, &Serial);  // debug output to USB serial port
 
 #if CALIBRATION == 1
 MagellanCalibrationUtil calibration(&Serial, &magellan);
