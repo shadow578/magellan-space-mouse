@@ -45,12 +45,12 @@ constexpr uint8_t LED_REPORT_ID = 4;
 /**
  * range for postion (x,y,z) values when sending to the 3DConnexion software
  */
-constexpr int16_t POSITION_RANGE[2] = { -800, +800 };
+constexpr int16_t POSITION_RANGE[2] = { -350, +350 };
 
 /**
  * range for rotation (u,v,w) values when sending to the 3DConnexion software
  */
-constexpr int16_t ROTATION_RANGE[2] = { -800, +800 };
+constexpr int16_t ROTATION_RANGE[2] = { -350, +350 };
 
 /**
  * how often to send a HID report (minimum delay)
