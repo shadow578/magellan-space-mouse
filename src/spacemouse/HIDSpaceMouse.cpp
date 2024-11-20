@@ -14,7 +14,7 @@ inline int16_t map_normal_float(const float value, const int16_t range[2])
   return range[0] + (value + 1.0f) * span / 2;
 }
 
-HIDSpaceMouse::HIDSpaceMouse() : PluggableUSBModule(2, 1, endpointTypes)
+HIDSpaceMouse::HIDSpaceMouse(Print *log) : PluggableUSBModule(2, 1, endpointTypes)
 {
   PluggableUSB().plug(this);
 
@@ -29,6 +29,9 @@ HIDSpaceMouse::HIDSpaceMouse() : PluggableUSBModule(2, 1, endpointTypes)
 
   // ensure last state is cleared
   commit_state();
+
+  // setup logging output
+  this->log = log;
 }
 
 int HIDSpaceMouse::getInterface(uint8_t* interfaceNumber)
@@ -147,6 +150,11 @@ void HIDSpaceMouse::update()
       {
         commit_state();
         this->hid_state = SEND_TRANSLATION;
+
+        if (this->log != nullptr)
+        {
+          this->log->println(F("[SpaceMouse] mouse state updated, entering SEND_TRANSLATION"));
+        }
       }
 
       break;
@@ -205,6 +213,12 @@ void HIDSpaceMouse::get_led_state()
     if (data[0] == LED_REPORT_ID)
     {
       ledState = data[1] == 1;
+
+      if (this->log != nullptr)
+      {
+        this->log->print(F("[SpaceMouse] got LED state: "));
+        this->log->println(ledState ? F("on") : F("off"));
+      }
     }
   }
   
@@ -212,6 +226,17 @@ void HIDSpaceMouse::get_led_state()
 
 void HIDSpaceMouse::submit_translation(const int16_t x, const int16_t y, const int16_t z)
 {
+  if (this->log != nullptr)
+  {
+    this->log->print(F("[SpaceMouse] submit_translation("));
+    this->log->print(x);
+    this->log->print(F(", "));
+    this->log->print(y);
+    this->log->print(F(", "));
+    this->log->print(z);
+    this->log->println(F(")"));
+  }
+
   const uint8_t translation[6] = {
     static_cast<uint8_t>(x & 0xFF), static_cast<uint8_t>(x >> 8),
     static_cast<uint8_t>(y & 0xFF), static_cast<uint8_t>(y >> 8),
@@ -223,6 +248,17 @@ void HIDSpaceMouse::submit_translation(const int16_t x, const int16_t y, const i
 
 void HIDSpaceMouse::submit_rotation(const int16_t u, const int16_t v, const int16_t w)
 {
+  if (this->log != nullptr)
+  {
+    this->log->print(F("[SpaceMouse] submit_rotation("));
+    this->log->print(u);
+    this->log->print(F(", "));
+    this->log->print(v);
+    this->log->print(F(", "));
+    this->log->print(w);
+    this->log->println(F(")"));
+  }
+
   const uint8_t rotation[6] = {
     static_cast<uint8_t>(u & 0xFF), static_cast<uint8_t>(u >> 8),
     static_cast<uint8_t>(v & 0xFF), static_cast<uint8_t>(v >> 8),
@@ -251,6 +287,17 @@ void HIDSpaceMouse::submit_buttons(const bool buttons[BUTTON_COUNT])
     {
       data[i / 8] |= 1 << (i % 8);
     }
+  }
+
+  if (this->log != nullptr)
+  {
+    this->log->print(F("[SpaceMouse] submit_buttons(): "));
+    for (size_t i = 0; i < len; i++)
+    {
+      this->log->print(data[i], BIN);
+      this->log->print(F(" "));
+    }
+    this->log->println();
   }
 
   send_report(BUTTON_REPORT_ID, data, len);

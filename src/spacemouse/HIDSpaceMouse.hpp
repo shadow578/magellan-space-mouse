@@ -143,7 +143,7 @@ typedef struct
 class HIDSpaceMouse : public PluggableUSBModule 
 {
 public: // PluggableUSBModule for HID
-  HIDSpaceMouse();
+  HIDSpaceMouse(Print *log = nullptr);
 
 protected:
   uint8_t endpointTypes[2] = { EP_TYPE_INTERRUPT_IN, EP_TYPE_INTERRUPT_OUT };
@@ -316,6 +316,8 @@ private:
   bool ledState = false;
 
 private:
+  Print *log = nullptr;
+
   /**
    * get the state of the LED from the 3DConnexion software, if available.
    */

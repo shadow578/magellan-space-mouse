@@ -20,8 +20,8 @@ constexpr float u_correction = 1.0f; // rotation around x axis
 constexpr float v_correction = 1.0f; // rotation around y axis
 constexpr float w_correction = 1.0f; // rotation around z axis
 
-HIDSpaceMouse spaceMouse;
-MagellanParser magellan(&Serial); // debug output to USB serial port
+HIDSpaceMouse spaceMouse(&Serial); // debug output to USB serial port
+MagellanParser magellan(&Serial);  // debug output to USB serial port
 
 bool was_ready = false;
 bool old_led = false;
