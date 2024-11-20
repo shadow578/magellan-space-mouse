@@ -8,7 +8,7 @@
 #warning "GIT_VERSION_STRING not defined! check your build environment."
 #endif
 
-#define WAIT_FOR_SERIAL 1
+#define WAIT_FOR_SERIAL 0
 #define CALIBRATION 0
 
 // correction factors applied to the values received from the Magellan
@@ -17,10 +17,10 @@
 // these values be in the range [-1.0f, 1.0f]
 constexpr float x_correction = 1.0f; // x position
 constexpr float y_correction = 1.0f; // y position
-constexpr float z_correction = 1.0f; // z position
-constexpr float u_correction = 1.0f; // rotation around x axis
+constexpr float z_correction = -1.0f; // z position
+constexpr float u_correction = -1.0f; // rotation around x axis
 constexpr float v_correction = 1.0f; // rotation around y axis
-constexpr float w_correction = 1.0f; // rotation around z axis
+constexpr float w_correction = -1.0f; // rotation around z axis
 
 // mapping of Magellan buttons to HIDSpaceMouse buttons
 static const HIDSpaceMouse::KnownButton button_mappings[magellan_internal::BUTTON_COUNT] = {
@@ -57,6 +57,9 @@ void setup()
   while (!Serial)
     ;
 #endif
+
+  // FIXME magellan hangs if we don't wait a bit here
+  delay(5000);
 
   Serial.println("[Main] setup()");
   Serial.println("[Main] version: " GIT_VERSION_STRING);
