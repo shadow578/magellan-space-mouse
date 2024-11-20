@@ -284,6 +284,20 @@ private:
   bool process_keypress(const char* payload, const uint8_t len);
   bool process_position_rotation(const char* payload, const uint8_t len);
 
+  /**
+   * decode a character into a nibble
+   * @param c the character to decode
+   * @return the decoded nibble
+   */
+  uint8_t decode_nibble(const char c);
+
+  /**
+   * decode a signed 16-bit word from a buffer of 4 characters
+   * @param buffer the buffer to decode
+   * @return the decoded value
+   */
+  int16_t decode_signed_word(const char* buffer);
+
 private:
   Print *log = nullptr;
 };

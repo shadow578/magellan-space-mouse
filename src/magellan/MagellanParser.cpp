@@ -7,10 +7,7 @@
 
 using namespace magellan_internal;
 
-/**
- * decode a character into a nibble
- */
-static uint8_t decode_nibble(const char c)
+uint8_t MagellanParser::decode_nibble(const char c)
 {
   switch(c)
   {
@@ -30,31 +27,34 @@ static uint8_t decode_nibble(const char c)
     case 'M': return 13;
     case 'N': return 14;
     case '?': return 15;
-    default: return 0;
+    default: 
+    {
+      if (this->log != nullptr)
+      {
+        this->log->print(F("[Magellan] decode_nibble() got unknown character: \""));
+        this->log->print(c);
+        this->log->println(F("\""));
+      }
+
+      return 0;
+    }
   }
 }
 
-/**
- * decode a signed 16-bit word from a buffer of 4 characters
- */
-static int16_t decode_signed_word(const char* buffer)
+int16_t MagellanParser::decode_signed_word(const char* buffer)
 {
-  uint8_t n0 = decode_nibble(buffer[0]);
+  const uint8_t n0 = decode_nibble(buffer[0]);
   const uint8_t n1 = decode_nibble(buffer[1]);
   const uint8_t n2 = decode_nibble(buffer[2]);
   const uint8_t n3 = decode_nibble(buffer[3]);
 
-  // extract sign and clear it from the nibble
-  const bool sign = (n0 & 0x08) != 0;
-  n0 &= 0x07;
-
   // combine nibbles
-  uint16_t value = n3 << 12 | n2 << 8 | n1 << 4 | n0;
+  int16_t value = static_cast<int16_t>(n1 << 8 | n2 << 4 | n3);
 
   // apply sign
-  if (sign)
+  if ((n0 & 0x08) == 0)
   {
-    value = -value;
+    value = -(4096 - value);
   }
 
   return value;
@@ -505,13 +505,20 @@ bool MagellanParser::process_position_rotation(const char* payload, const uint8_
   const int16_t w = decode_signed_word(payload + 16); // theta Z = rZ
 
   // normalize values to be in the range [-1.0, 1.0]
-  constexpr float D = 32767.0f;
-  this->x = x / D;
-  this->y = y / D;
-  this->z = z / D;
-  this->u = u / D;
-  this->v = v / D;
-  this->w = w / D;
+  // the mouse seems to send values in a range of about [-2400, +2000] in 
+  // highest sensitivity mode, so let's assume a effective range 
+  // of [-2500 to +2500] and clamp the rest.
+  // this may cause some weirdness, but it's way better than not working at all... 
+  #define SCALE(n) (constrain((n / 2500.0f), -1.0, 1.0))
+
+  // TODO: allow calibration of ranges depending on the sensitivity setting
+
+  this->x = SCALE(x);
+  this->y = SCALE(y);
+  this->z = SCALE(z);
+  this->u = SCALE(u);
+  this->v = SCALE(v);
+  this->w = SCALE(w);
 
   if (this->log != nullptr)
   {
