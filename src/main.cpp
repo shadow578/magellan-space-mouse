@@ -8,8 +8,9 @@
 #warning "GIT_VERSION_STRING not defined! check your build environment."
 #endif
 
-#define WAIT_FOR_SERIAL 0
-#define CALIBRATION 0
+#define WAIT_FOR_SERIAL 0 // wait for serial monitor to connect before starting
+#define DEBUG 1           // debug level. 0=off, 1=main only, 2=main+magellan, 3=main+magellan+hid
+#define CALIBRATION 0     // enable calibration mode. normal usage is disabled when calibration is enabled
 
 // magellan axis calibration values, as reported by CalibrationUtil
 static const magellan_internal::axis_calibration_t cal = {
@@ -48,8 +49,17 @@ static const HIDSpaceMouse::KnownButton button_mappings[magellan_internal::BUTTO
     HIDSpaceMouse::MENU   // Key "*" (double press)
 };
 
+#if DEBUG >= 2
 HIDSpaceMouse spaceMouse(&Serial); // debug output to USB serial port
-MagellanParser magellan(&cal, &Serial);  // debug output to USB serial port
+#else
+HIDSpaceMouse spaceMouse; // no debug output
+#endif
+
+#if DEBUG >= 3
+MagellanParser magellan(&cal, &Serial); // debug output to USB serial port
+#else
+MagellanParser magellan(&cal); // no debug output
+#endif
 
 #if CALIBRATION == 1
 MagellanCalibrationUtil calibration(&Serial, &magellan);
@@ -90,7 +100,9 @@ void handle_buttons(const bool from_event)
   static uint32_t star_first_release_millis = 0;
 
   const uint32_t now = millis();
+#if DEBUG >= 1
   const StarButtonState old_state = star_button_state;
+#endif
 
   switch (star_button_state)
   {
@@ -143,6 +155,7 @@ void handle_buttons(const bool from_event)
   }
   }
 
+#if DEBUG >= 1
   if (star_button_state != old_state)
   {
     Serial.print(F("[Main] STAR button state changed: "));
@@ -150,6 +163,7 @@ void handle_buttons(const bool from_event)
     Serial.print(F(" -> "));
     Serial.println(star_button_state);
   }
+#endif
 }
 
 void setup()
@@ -163,13 +177,12 @@ void setup()
   // wait for host to open serial port
   while (!Serial)
     ;
-#endif
-
+#else
   // FIXME magellan hangs if we don't wait a bit here
   delay(5000);
+#endif
 
-  Serial.println("[Main] setup()");
-  Serial.println("[Main] version: " GIT_VERSION_STRING);
+  Serial.println("[Main] running version \"" GIT_VERSION_STRING "\" @ debug level " STRINGIFY(DEBUG));
 }
 
 void loop()
@@ -188,13 +201,17 @@ void loop()
     if (is_ready && !was_ready)
     {
       // just became ready
-      Serial.println("[Main] magellan is now ready");
       magellan.beep();
+#if DEBUG >= 1
+      Serial.println("[Main] magellan is now ready");
+#endif
     }
     else if (!is_ready && was_ready)
     {
+#if DEBUG >= 1
       // no longer ready ?!
       Serial.println("[Main] magellan is no longer ready");
+#endif
     }
     was_ready = is_ready;
 
@@ -214,7 +231,8 @@ void loop()
       handle_buttons(true);
     }
 
-    // debug print to console even when not ready
+#if DEBUG >= 1
+    // print to console even when not ready
     Serial.print("[Main]: x=");
     Serial.print(magellan.get_x());
     Serial.print(", y=");
@@ -229,7 +247,16 @@ void loop()
     Serial.print(magellan.get_w());
     Serial.print(", buttons=");
     Serial.print(magellan.get_buttons(), BIN);
+    Serial.print(", T-Gain=");
+    Serial.print(magellan.get_translation_sensitivity());
+    Serial.print(", R-Gain=");
+    Serial.print(magellan.get_rotation_sensitivity());
+    Serial.print(", mode=");
+    Serial.print(magellan.get_mode());
+    Serial.print(", ready=");
+    Serial.print(is_ready);
     Serial.println();
+#endif
   }
 
   handle_buttons(false);
@@ -239,8 +266,10 @@ void loop()
   static bool old_led = false;
   if (spaceMouse.get_led() != old_led)
   {
+#if DEBUG >= 1
     Serial.print("[Main] LED state changed: ");
     Serial.println(spaceMouse.get_led() ? "on" : "off");
+#endif
     old_led = spaceMouse.get_led();
   }
 }

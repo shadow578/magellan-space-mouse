@@ -205,6 +205,8 @@ public:
   uint8_t get_translation_sensitivity() const { return translation_sensitivity; }
   uint8_t get_rotation_sensitivity() const { return rotation_sensitivity; }
 
+  uint8_t get_mode() const { return mode; }
+
 private:
   /**
    * the serial port to use
