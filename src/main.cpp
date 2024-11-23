@@ -38,15 +38,15 @@ constexpr uint32_t STAR_BUTTON_DOUBLE_PRESS_TIMEOUT = 500; // ms
 
 // mapping of Magellan buttons to HIDSpaceMouse buttons
 static const HIDSpaceMouse::KnownButton button_mappings[magellan_internal::BUTTON_COUNT] = {
-    HIDSpaceMouse::ONE,   // Key "1"
-    HIDSpaceMouse::TWO,   // Key "2"
-    HIDSpaceMouse::THREE, // Key "3"
-    HIDSpaceMouse::FOUR,  // Key "4"
-    HIDSpaceMouse::FIT,   // Key "5"
-    HIDSpaceMouse::TOP,   // Key "6"
-    HIDSpaceMouse::RIGHT, // Key "7"
-    HIDSpaceMouse::FRONT, // Key "8"
-    HIDSpaceMouse::MENU   // Key "*" (double press)
+    HIDSpaceMouse::ONE,     // Key "1"
+    HIDSpaceMouse::TWO,     // Key "2"
+    HIDSpaceMouse::THREE,   // Key "3"
+    HIDSpaceMouse::FOUR,    // Key "4"
+    HIDSpaceMouse::ESCAPE,  // Key "5"
+    HIDSpaceMouse::CONTROL, // Key "6"
+    HIDSpaceMouse::ALT,     // Key "7"
+    HIDSpaceMouse::SHIFT,   // Key "8"
+    HIDSpaceMouse::MENU     // Key "*" (double press)
 };
 
 #if DEBUG >= 2
