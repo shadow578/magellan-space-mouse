@@ -59,6 +59,22 @@ namespace magellan_internal
    * @note starts at INIT_RESET and is cleared when space mouse reports version and mode 3
    */
   constexpr uint32_t READY_WAIT_TIMEOUT = 5000; // 5 seconds
+
+  struct axis_bounds_t
+  {
+    int16_t min;
+    int16_t max;
+  };
+
+  struct axis_calibration_t
+  {
+    axis_bounds_t x;
+    axis_bounds_t y;
+    axis_bounds_t z;
+    axis_bounds_t u;
+    axis_bounds_t v;
+    axis_bounds_t w;
+  };
 }
 
 /**
@@ -67,8 +83,9 @@ namespace magellan_internal
 class MagellanParser
 {
 public:
-  MagellanParser(Print *log = nullptr)
+  MagellanParser(const magellan_internal::axis_calibration_t *calibration, Print *log = nullptr)
   {
+    this->calibration = calibration;
     this->log = log;
   }
 
@@ -76,7 +93,7 @@ public:
    * setup the space mouse and initialize
    * @param serial the serial port to use. must be exclusive to the space mouse
    * @note call in setup()
-   * @note 
+   * @note
    * the mouse will be initialize by subsequent calls to update().
    * check is_ready() to see if the mouse is ready.
    */
@@ -124,8 +141,8 @@ public:
    * update the state machine, read new data, ...
    * @return true if values have changed
    * @note call in loop()
-   * @note 
-   * must be called even when ready() returns false. 
+   * @note
+   * must be called even when ready() returns false.
    * values are only valid when ready() returns true.
    */
   bool update();
@@ -140,25 +157,28 @@ public:
     send_command(magellan_internal::COMMAND_BEEP);
   }
 
-  bool ready() const 
+  bool ready() const
   {
     return init_state == DONE;
   }
 
-  // normalize values to be in the range [-1.0, 1.0]
-  // the mouse seems to send values in a range of about [-2400, +2000] in 
-  // highest sensitivity mode, so let's assume a effective range 
-  // of [-2500 to +2500] and clamp the rest.
-  // this may cause some weirdness, but it's way better than not working at all... 
-  // TODO allow calibration of ranges with both maximum and minimum for all axes
-  #define SCALE(n) (constrain((n / 2500.0f), -1.0, 1.0))
+  // normalize values to be in the range [-1.0, 1.0] using the calibration values
+  // also, apply clamping to ensure the range is not exceeded
+  #define SCALE(axis)                                                     \
+    constrain(                                                            \
+      /*positive?*/((this->axis > 0) ?                                    \
+      (this->axis / static_cast<float>(this->calibration->axis.max)) :    \
+      /*negative?*/(this->axis < 0) ?                                     \
+      (this->axis / -(static_cast<float>(this->calibration->axis.min))) : \
+      /*zero*/0.0f),                                                      \
+      /*min*/ -1.0f, /*max*/ 1.0f)
 
   float get_x() const { return SCALE(x); }
   float get_y() const { return SCALE(y); }
   float get_z() const { return SCALE(z); }
-  float get_u() const { return SCALE(u); }
-  float get_v() const { return SCALE(v); }
-  float get_w() const { return SCALE(w); }
+  float get_u() const { return SCALE(u); } // rotation around X
+  float get_v() const { return SCALE(v); } // rotation around Y
+  float get_w() const { return SCALE(w); } // rotation around Z
 
   int16_t get_x_raw() const { return x; }
   int16_t get_y_raw() const { return y; }
@@ -244,9 +264,9 @@ private:
 private:
   enum rx_state_t
   {
-    IDLE,                         // waiting for start of message
-    READ_MESSAGE,                 // read message data until MESSAGE_END separator
-    WAIT_MESSAGE_END              // wait for MESSAGE_END separator, drop all data
+    IDLE,            // waiting for start of message
+    READ_MESSAGE,    // read message data until MESSAGE_END separator
+    WAIT_MESSAGE_END // wait for MESSAGE_END separator, drop all data
   };
 
   enum message_type_t : char
@@ -294,8 +314,8 @@ private:
           y = 0,
           z = 0,
           u = 0, // rx
-          v = 0, // ry
-          w = 0; // rz
+      v = 0,     // ry
+      w = 0;     // rz
 
   /**
    * internal state values for all buttons.
@@ -312,7 +332,7 @@ private:
    * @note adding MESSAGE_END is the responsibility of the caller
    * @note this function may block for a few hundred milliseconds
    */
-  void send_command(const char* command);
+  void send_command(const char *command);
 
   /**
    * process a message received from the space mouse
@@ -321,15 +341,15 @@ private:
    * @param len the length of the message data
    * @return were any state values updated?
    */
-  bool process_message(const message_type_t type, const char* payload, const uint8_t len);
+  bool process_message(const message_type_t type, const char *payload, const uint8_t len);
 
   // functions to process specific message types
-  bool process_version(const char* payload, const uint8_t len);
-  bool process_mode_change(const char* payload, const uint8_t len);
-  bool process_sensitivity_change(const char* payload, const uint8_t len);
-  bool process_zero(const char* payload, const uint8_t len);
-  bool process_keypress(const char* payload, const uint8_t len);
-  bool process_position_rotation(const char* payload, const uint8_t len);
+  bool process_version(const char *payload, const uint8_t len);
+  bool process_mode_change(const char *payload, const uint8_t len);
+  bool process_sensitivity_change(const char *payload, const uint8_t len);
+  bool process_zero(const char *payload, const uint8_t len);
+  bool process_keypress(const char *payload, const uint8_t len);
+  bool process_position_rotation(const char *payload, const uint8_t len);
 
   /**
    * decode a character into a nibble
@@ -343,8 +363,9 @@ private:
    * @param buffer the buffer to decode
    * @return the decoded value
    */
-  int16_t decode_signed_word(const char* buffer);
+  int16_t decode_signed_word(const char *buffer);
 
 private:
+  const magellan_internal::axis_calibration_t *calibration;
   Print *log = nullptr;
 };
