@@ -69,7 +69,7 @@ int HIDSpaceMouse::getDescriptor(USBSetup& setup)
     return 0;
   }
 
-  // FIXME: protocol = HID_REPORT_PROTOCOL;
+  // protocol = HID_REPORT_PROTOCOL;
 
   return USB_SendControl(TRANSFER_PGM, SPACE_MOUSE_REPORT_DESCRIPTOR, sizeof(SPACE_MOUSE_REPORT_DESCRIPTOR));
 }
@@ -97,12 +97,12 @@ bool HIDSpaceMouse::setup(USBSetup& setup)
   {
     if (setup.bRequest == HID_SET_PROTOCOL)
     {
-      //FIXME: protocol = setup.wValueL;
+      // protocol = setup.wValueL;
       return true;
     }
     if (setup.bRequest == HID_SET_IDLE)
     {
-      // FIXME: idle = setup.wValueL;
+      // idle = setup.wValueL;
       return true;
     }
     if (setup.bRequest == HID_SET_REPORT)
@@ -114,6 +114,21 @@ bool HIDSpaceMouse::setup(USBSetup& setup)
 			// Data Fragment: 0700
 			// Unfortunately, we are simulating a _SpaceMouse Pro Wireless (cabled)_, because it has more than two buttons
 			// With this SM pro, the windows driver is NOT sending this status report and their is no point in waiting for it...
+
+      if (this->log != nullptr)
+      {
+        this->log->println(F("[SpaceMouse] got HID_SET_REPORT: "));
+        this->log->print(F("  wValue="));
+        this->log->println(setup.wValueL, HEX);
+        this->log->print(F("  wIndex="));
+        this->log->println(setup.wIndex, HEX);
+        this->log->print(F("  wLength="));
+        this->log->println(setup.wLength, HEX);
+        this->log->print(F("  Value H/L="));
+        this->log->print(setup.wValueH, HEX);
+        this->log->print(F("/"));
+        this->log->println(setup.wValueL, HEX);        
+      }
 			return true;
     }
   }
