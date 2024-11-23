@@ -163,12 +163,15 @@ public:
   }
 
   // normalize values to be in the range [-1.0, 1.0] using the calibration values
-  #define SCALE(axis)                                                   \
-    /*positive?*/((this->axis > 0) ?                                    \
-    (this->axis / static_cast<float>(this->calibration->axis.max)) :    \
-    /*negative?*/(this->axis < 0) ?                                     \
-    (this->axis / -(static_cast<float>(this->calibration->axis.min))) : \
-    /*zero*/0.0f)
+  // also, apply clamping to ensure the range is not exceeded
+  #define SCALE(axis)                                                     \
+    constrain(                                                            \
+      /*positive?*/((this->axis > 0) ?                                    \
+      (this->axis / static_cast<float>(this->calibration->axis.max)) :    \
+      /*negative?*/(this->axis < 0) ?                                     \
+      (this->axis / -(static_cast<float>(this->calibration->axis.min))) : \
+      /*zero*/0.0f),                                                      \
+      /*min*/ -1.0f, /*max*/ 1.0f)
 
   float get_x() const { return SCALE(x); }
   float get_y() const { return SCALE(y); }
