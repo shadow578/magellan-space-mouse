@@ -40,6 +40,12 @@ namespace magellan_internal
   static const char COMMAND_SET_MODE3[] = "m3\r";
 
   /**
+   * set sensitivity command
+   * @note sets both translation and rotation sensitivity to 7
+   */
+  static const char COMMAND_SET_SENSITIVITY[] = "qGG\r";
+
+  /**
    * zero command
    */
   static const char COMMAND_ZERO[] = "z\r";
@@ -222,6 +228,8 @@ private:
     WAIT_BUTTON_REPORTING,    // wait for button reporting to be enabled
     REQUEST_SET_MODE,         // send set mode command
     WAIT_SET_MODE,            // wait for mode to be set
+    REQUEST_SET_SENSITIVITY,  // send set sensitivity command
+    WAIT_SET_SENSITIVITY,     // wait for sensitivity to be set
     REQUEST_ZERO,             // send zero command
     WAIT_ZERO,                // wait for zero command to be acknowledged
     DONE                      // init sequence is complete

@@ -3,7 +3,7 @@
 // delay between sending each character of a command
 // can be used to slow down communication to the 
 // Magellan to compensate for missing flow control
-#define SEND_INTER_CHARACTER_DELAY 5 // ms; 0 to disable
+#define SEND_INTER_CHARACTER_DELAY 10 // ms; 0 to disable
 
 using namespace magellan_internal;
 
@@ -151,6 +151,23 @@ void MagellanParser::update_init()
       // wait for mode to be set
       // mode is parsed in process_message()
       if (this->mode == 3)
+      {
+        this->init_state = REQUEST_SET_SENSITIVITY;
+      }
+      break;
+    }
+    case REQUEST_SET_SENSITIVITY:
+    {
+      // set sensitivity to 7 for both translation and rotation
+      this->send_command(COMMAND_SET_SENSITIVITY);
+      this->init_state = WAIT_SET_SENSITIVITY;
+      break;
+    }
+    case WAIT_SET_SENSITIVITY:
+    {
+      // wait for sensitivity to be set
+      // sensitivity is parsed in process_message()
+      if (this->translation_sensitivity == 7 && this->rotation_sensitivity == 7)
       {
         this->init_state = REQUEST_ZERO;
       }
