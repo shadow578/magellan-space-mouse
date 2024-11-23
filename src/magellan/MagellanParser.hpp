@@ -176,9 +176,9 @@ public:
   float get_x() const { return SCALE(x); }
   float get_y() const { return SCALE(y); }
   float get_z() const { return SCALE(z); }
-  float get_u() const { return SCALE(u); }
-  float get_v() const { return SCALE(v); }
-  float get_w() const { return SCALE(w); }
+  float get_u() const { return SCALE(u); } // rotation around X
+  float get_v() const { return SCALE(v); } // rotation around Y
+  float get_w() const { return SCALE(w); } // rotation around Z
 
   int16_t get_x_raw() const { return x; }
   int16_t get_y_raw() const { return y; }

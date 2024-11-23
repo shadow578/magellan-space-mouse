@@ -498,8 +498,8 @@ bool MagellanParser::process_position_rotation(const char* payload, const uint8_
   this->x = decode_signed_word(payload + 0);
   this->y = decode_signed_word(payload + 8);
   this->z = decode_signed_word(payload + 4);
-  this->u = decode_signed_word(payload + 20); // theta X = rX
-  this->v = decode_signed_word(payload + 12); // theta Y = rY
+  this->u = decode_signed_word(payload + 12); // theta Y = rY
+  this->v = decode_signed_word(payload + 20); // theta X = rX
   this->w = decode_signed_word(payload + 16); // theta Z = rZ
 
   if (this->log != nullptr)
