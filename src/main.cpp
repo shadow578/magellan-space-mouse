@@ -179,7 +179,7 @@ void setup()
     ;
 #else
   // FIXME magellan hangs if we don't wait a bit here
-  delay(5000);
+  delay(2500);
 #endif
 
   Serial.println("[Main] running version \"" GIT_VERSION_STRING "\" @ debug level " STRINGIFY(DEBUG));
