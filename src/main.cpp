@@ -13,23 +13,23 @@
 
 // magellan axis calibration values, as reported by CalibrationUtil
 static const magellan_internal::axis_calibration_t cal = {
-  .x={-4092, 4029}, 
-  .y={-3995, 3658}, 
-  .z={-3706, 4017}, 
-  .u={-4077, 3881}, 
-  .v={-4063, 3812}, 
-  .w={-3828, 4089}
+  .x={-3775, 2173}, 
+  .y={-3900, 4037}, 
+  .z={-1682, 3122}, 
+  .u={-2466, 3537}, 
+  .v={-3939, 2002}, 
+  .w={-3839, 1691}
 };
 
 // correction factors applied to the values received from the Magellan
 // before being sent to the HIDSpaceMouse.
 // 1.0f means no correction, -1.0f means invert the value.
 // these values be in the range [-1.0f, 1.0f]
-constexpr float x_correction = 1.0f; // x position
-constexpr float y_correction = 1.0f; // y position
+constexpr float x_correction = 1.0f;  // x position
+constexpr float y_correction = 1.0f;  // y position
 constexpr float z_correction = -1.0f; // z position
-constexpr float u_correction = -1.0f; // rotation around x axis
-constexpr float v_correction = 1.0f; // rotation around y axis
+constexpr float u_correction = 1.0f;  // rotation around x axis
+constexpr float v_correction = 1.0f;  // rotation around y axis
 constexpr float w_correction = -1.0f; // rotation around z axis
 
 // mapping of Magellan buttons to HIDSpaceMouse buttons
